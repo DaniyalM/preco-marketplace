@@ -1,0 +1,35 @@
+{
+    "realm": "ecommerce-realm",
+    "enabled": true,
+    "roles": {
+        "realm": [{ "name": "admin" }, { "name": "vendor" }, { "name": "customer" }]
+    },
+    "clients": [
+        {
+            "clientId": "laravel-client",
+            "enabled": true,
+            "publicClient": false,
+            "secret": "your-client-secret-here",
+            "redirectUris": ["http://localhost:8000/*"],
+            "webOrigins": ["http://localhost:8000"],
+            "standardFlowEnabled": true,
+            "directAccessGrantsEnabled": true
+        }
+    ],
+    "identityProviders": [
+        {
+            "alias": "google",
+            "displayName": "Google",
+            "providerId": "google",
+            "enabled": true,
+            "trustEmail": true,
+            "storeToken": true,
+            "addReadTokenRoleOnImport": true,
+            "config": {
+                "clientId": "YOUR_GOOGLE_CLIENT_ID",
+                "clientSecret": "YOUR_GOOGLE_CLIENT_SECRET",
+                "guiOrder": "1"
+            }
+        }
+    ]
+}

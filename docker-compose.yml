@@ -1,0 +1,95 @@
+services:
+  # Laravel Octane App
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ecommerce_app
+    restart: unless-stopped
+    ports:
+      - '8000:8000'
+    environment:
+      APP_ENV: production
+      OCTANE_SERVER: swoole
+    volumes:
+      - ./php.ini:/usr/local/etc/php/conf.d/99-custom.ini
+      - .:/var/www
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - ecommerce_network
+
+  # Queue Worker (Same image, different entrypoint)
+  worker:
+    build: .
+    container_name: ecommerce_worker
+    restart: unless-stopped
+    entrypoint: ['php', '/var/www/artisan', 'queue:work', 'redis', '--tries=3']
+    volumes:
+      - .:/var/www
+    depends_on:
+      - redis
+    networks:
+      - ecommerce_network
+
+  # MySQL Database
+  mysql:
+    image: mysql:8.4
+    container_name: ecommerce_mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-ecommerce}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+    ports:
+      - '3306:3306'
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ecommerce_network
+
+  # Redis (Sessions, Cache, Queues)
+  redis:
+    image: redis:7-alpine
+    container_name: ecommerce_redis
+    restart: always
+    command: redis-server --appendonly yes
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    networks:
+      - ecommerce_network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: ecommerce_iam
+    command: start-dev --import-realm
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_DB: dev-file # Using local dev-file for simplicity; can be pointed to MySQL
+      KC_HEALTH_ENABLED: 'true'
+      KC_HTTP_ENABLED: 'true'
+      KC_HOSTNAME_STRICT: 'false'
+    ports:
+      - '8080:8080'
+    volumes:
+      - ./keycloak/realm.json:/opt/keycloak/data/import/realm-export.json
+    networks:
+      - ecommerce_network
+
+networks:
+  ecommerce_network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  redis_data:
