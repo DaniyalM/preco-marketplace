@@ -1,0 +1,58 @@
+# P-Commerce Development Dockerfile
+# Includes dev dependencies and tools for hot reloading
+
+FROM php:8.4-cli-alpine
+
+ENV APP_ENV=local
+ENV OCTANE_SERVER=swoole
+
+# Install extension installer (compatible with non-BuildKit)
+ADD https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
+RUN chmod +x /usr/local/bin/install-php-extensions
+
+# Install system dependencies
+RUN apk add --no-cache \
+    nodejs \
+    npm \
+    git \
+    zip \
+    unzip \
+    curl \
+    bash \
+    linux-headers \
+    $PHPIZE_DEPS
+
+# Install PHP extensions (including xdebug for dev)
+RUN install-php-extensions \
+    swoole \
+    redis \
+    pcntl \
+    gd \
+    zip \
+    pdo_pgsql \
+    intl \
+    bcmath \
+    xdebug
+
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Install chokidar for file watching (Octane --watch)
+RUN npm install -g chokidar-cli
+
+WORKDIR /var/www
+
+# Create user
+RUN addgroup -g 1000 www && adduser -u 1000 -G www -s /bin/bash -D www
+
+# Configure xdebug
+RUN echo "xdebug.mode=develop,debug" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
+    && echo "xdebug.start_with_request=trigger" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
+    && echo "xdebug.client_host=host.docker.internal" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
+    && echo "xdebug.client_port=9003" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+
+USER www
+
+EXPOSE 8000 5173
+
+CMD ["php", "artisan", "octane:start", "--watch", "--server=swoole", "--host=0.0.0.0", "--port=8000"]

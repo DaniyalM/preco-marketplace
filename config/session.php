@@ -18,7 +18,10 @@ return [
     |
     */
 
-    'driver' => env('SESSION_DRIVER', 'database'),
+    // Use 'array' driver for stateless operation (sessions are not persisted)
+    // This still allows Laravel's session facade to work for flash messages
+    // while not consuming server resources
+    'driver' => env('SESSION_DRIVER', 'array'),
 
     /*
     |--------------------------------------------------------------------------

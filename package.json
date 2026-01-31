@@ -6,6 +6,9 @@
         "build": "vite build",
         "build:ssr": "vite build && vite build --ssr",
         "dev": "vite",
+        "dev:ssr": "concurrently \"npm run dev\" \"npm run ssr\"",
+        "ssr": "node bootstrap/ssr/ssr.mjs",
+        "ssr:build": "vite build --ssr",
         "format": "prettier --write resources/",
         "format:check": "prettier --check resources/",
         "lint": "eslint . --fix"

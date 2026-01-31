@@ -1,11 +1,62 @@
 <?php
 
-
+use App\Http\Controllers\Api\CartController;
+use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\VendorController;
+use App\Http\Controllers\Api\WishlistController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware(['auth.keycloak'])->group(function () {
+/*
+|--------------------------------------------------------------------------
+| API Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register API routes for your application. These
+| routes are loaded by the RouteServiceProvider and all of them will
+| be assigned to the "api" middleware group. Make something great!
+|
+*/
+
+// Public API routes
+Route::prefix('public')->group(function () {
+    // Products
+    Route::get('/products', [ProductController::class, 'index']);
+    Route::get('/products/{slug}', [ProductController::class, 'show']);
+    Route::get('/products/featured', [ProductController::class, 'featured']);
+    Route::get('/products/search', [ProductController::class, 'search']);
+
+    // Categories
+    Route::get('/categories', [CategoryController::class, 'index']);
+    Route::get('/categories/{slug}', [CategoryController::class, 'show']);
+    Route::get('/categories/{slug}/products', [CategoryController::class, 'products']);
+
+    // Vendors
+    Route::get('/vendors', [VendorController::class, 'index']);
+    Route::get('/vendors/{slug}', [VendorController::class, 'show']);
+    Route::get('/vendors/{slug}/products', [VendorController::class, 'products']);
+});
+
+// Authenticated API routes
+Route::middleware(['role:customer,vendor,admin'])->group(function () {
+    // User profile
     Route::get('/user/profile', function (Request $request) {
-        // Access decoded Keycloak data
-        return response()->json($request->get('keycloak_user'));
+        return response()->json([
+            'user' => $request->attributes->get('keycloak_user'),
+            'roles' => $request->attributes->get('keycloak_roles'),
+        ]);
     });
+
+    // Cart
+    Route::get('/cart', [CartController::class, 'index']);
+    Route::post('/cart/items', [CartController::class, 'addItem']);
+    Route::patch('/cart/items/{item}', [CartController::class, 'updateItem']);
+    Route::delete('/cart/items/{item}', [CartController::class, 'removeItem']);
+    Route::delete('/cart', [CartController::class, 'clear']);
+
+    // Wishlist
+    Route::get('/wishlist', [WishlistController::class, 'index']);
+    Route::post('/wishlist', [WishlistController::class, 'toggle']);
+    Route::delete('/wishlist/{product}', [WishlistController::class, 'remove']);
 });

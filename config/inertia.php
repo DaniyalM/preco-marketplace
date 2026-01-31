@@ -11,14 +11,16 @@ return [
     | to pre-render every initial visit made to your application's pages
     | automatically. A separate rendering service should be available.
     |
+    | SSR improves SEO by providing fully rendered HTML to search engines.
+    | Enable SSR for public-facing pages (products, categories, vendors).
+    |
     | See: https://inertiajs.com/server-side-rendering
     |
     */
 
     'ssr' => [
-        'enabled' => true,
-        'url' => 'http://127.0.0.1:13714',
-        // 'bundle' => base_path('bootstrap/ssr/ssr.mjs'),
+        'enabled' => env('INERTIA_SSR_ENABLED', true),
+        'url' => env('INERTIA_SSR_URL', 'http://127.0.0.1:13714'),
     ],
 
     /*
@@ -36,7 +38,7 @@ return [
         'ensure_pages_exist' => true,
 
         'page_paths' => [
-            resource_path('js/pages'),
+            resource_path('js/Pages'),
         ],
 
         'page_extensions' => [

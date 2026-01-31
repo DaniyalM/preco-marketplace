@@ -8,12 +8,11 @@ return [
     |--------------------------------------------------------------------------
     |
     | Laravel's queue supports a variety of backends via a single, unified
-    | API, giving you convenient access to each backend using identical
-    | syntax for each. The default queue connection is defined below.
+    | API. Here you may define a default connection.
     |
     */
 
-    'default' => env('QUEUE_CONNECTION', 'database'),
+    'default' => env('QUEUE_CONNECTION', 'redis'),
 
     /*
     |--------------------------------------------------------------------------
@@ -22,10 +21,9 @@ return [
     |
     | Here you may configure the connection options for every queue backend
     | used by your application. An example configuration is provided for
-    | each backend supported by Laravel. You're also free to add more.
+    | each backend supported by Laravel.
     |
-    | Drivers: "sync", "database", "beanstalkd", "sqs", "redis",
-    |          "deferred", "background", "failover", "null"
+    | Drivers: "sync", "database", "beanstalkd", "sqs", "redis", "null"
     |
     */
 
@@ -73,22 +71,6 @@ return [
             'after_commit' => false,
         ],
 
-        'deferred' => [
-            'driver' => 'deferred',
-        ],
-
-        'background' => [
-            'driver' => 'background',
-        ],
-
-        'failover' => [
-            'driver' => 'failover',
-            'connections' => [
-                'database',
-                'deferred',
-            ],
-        ],
-
     ],
 
     /*
@@ -103,7 +85,7 @@ return [
     */
 
     'batching' => [
-        'database' => env('DB_CONNECTION', 'sqlite'),
+        'database' => env('DB_CONNECTION', 'mysql'),
         'table' => 'job_batches',
     ],
 
@@ -122,8 +104,33 @@ return [
 
     'failed' => [
         'driver' => env('QUEUE_FAILED_DRIVER', 'database-uuids'),
-        'database' => env('DB_CONNECTION', 'sqlite'),
+        'database' => env('DB_CONNECTION', 'mysql'),
         'table' => 'failed_jobs',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Queue Priorities
+    |--------------------------------------------------------------------------
+    |
+    | Define queue priorities for the worker. Higher priority queues
+    | are processed first.
+    |
+    | Usage in worker command:
+    | php artisan queue:work --queue=high,orders,notifications,default,images,documents,search,reports,cleanup
+    |
+    */
+
+    'priorities' => [
+        'high' => 1,        // Critical/urgent jobs
+        'orders' => 2,      // Order processing
+        'notifications' => 3, // Email notifications
+        'default' => 4,     // Default queue
+        'images' => 5,      // Image processing
+        'documents' => 6,   // Document processing
+        'search' => 7,      // Search index sync
+        'reports' => 8,     // Report generation
+        'cleanup' => 9,     // Cleanup tasks
     ],
 
 ];

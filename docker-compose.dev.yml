@@ -1,0 +1,103 @@
+# Development Docker Compose Override
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  # Development app with hot reload
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: pcommerce_app_dev
+    environment:
+      APP_ENV: local
+      APP_DEBUG: 'true'
+      APP_URL: http://localhost:8000
+      LOG_CHANNEL: stack
+      SESSION_DRIVER: array
+      KEYCLOAK_BASE_URL: http://keycloak:8080
+    volumes:
+      # Mount source code for hot reload
+      - .:/var/www
+      - /var/www/vendor
+      - /var/www/node_modules
+    ports:
+      - '8000:8000'
+      - '5173:5173'  # Vite HMR
+    command: >
+      sh -c "composer install &&
+             npm install &&
+             php artisan octane:start --watch --server=swoole --host=0.0.0.0 --port=8000"
+
+  # Vite dev server (optional - run separately)
+  vite:
+    image: node:20-alpine
+    container_name: pcommerce_vite
+    working_dir: /app
+    volumes:
+      - .:/app
+    ports:
+      - '5173:5173'
+    command: npm run dev -- --host
+    profiles:
+      - vite
+
+  # Worker with auto-restart
+  worker:
+    environment:
+      APP_ENV: local
+      APP_DEBUG: 'true'
+    volumes:
+      - .:/var/www
+    entrypoint: ['php', '/var/www/artisan', 'queue:work', 'redis', '--tries=3', '--queue=default,notifications']
+
+  # Disable scheduler in dev
+  scheduler:
+    profiles:
+      - scheduler
+
+  # Keycloak in dev mode
+  keycloak:
+    environment:
+      KC_LOG_LEVEL: DEBUG
+    ports:
+      - '8080:8080'
+      - '8443:8443'
+
+  # Disable nginx in dev (access Octane directly)
+  nginx:
+    profiles:
+      - nginx
+
+  # Enable mailpit for email testing
+  mailpit:
+    profiles: []  # Enable in dev
+
+  # phpMyAdmin for database management
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: pcommerce_phpmyadmin
+    restart: unless-stopped
+    ports:
+      - '8081:80'
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: root
+      PMA_PASSWORD: ${DB_PASSWORD:-root}
+    depends_on:
+      - mysql
+    networks:
+      - pcommerce_network
+
+  # Redis Commander for cache inspection
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: pcommerce_redis_ui
+    restart: unless-stopped
+    ports:
+      - '8082:8081'
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    depends_on:
+      - redis
+    networks:
+      - pcommerce_network

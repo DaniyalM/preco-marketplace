@@ -12,13 +12,16 @@ createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
     resolve: (name) => resolvePageComponent(`./Pages/${name}.vue`, import.meta.glob<DefineComponent>('./Pages/**/*.vue')),
     setup({ el, App, props, plugin }) {
+        const pinia = createPinia();
         const app = createApp({ render: () => h(App, props) });
 
-        app.use(plugin).use(createPinia());
+        app.use(plugin).use(pinia);
+        
+        // Initialize auth store (stateless - reads from Inertia shared props)
         const authStore = useAuthStore();
-        authStore.initKeycloak().then(() => {
-            app.mount(el);
-        });
+        authStore.init();
+        
+        app.mount(el);
     },
     progress: {
         color: '#4B5563',

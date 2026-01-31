@@ -123,4 +123,16 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Default Tenant ID
+    |--------------------------------------------------------------------------
+    |
+    | This value is used as a fallback when no tenant_id is found in the
+    | JWT token. Useful for single-tenant setups or development.
+    |
+    */
+
+    'default_tenant' => env('DEFAULT_TENANT_ID', 'default'),
+
 ];

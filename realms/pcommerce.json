@@ -1,35 +1,419 @@
 {
-    "realm": "ecommerce-realm",
+    "realm": "pcommerce",
     "enabled": true,
+    "displayName": "P-Commerce Marketplace",
+    "displayNameHtml": "<strong>P-Commerce</strong> Marketplace",
+    "registrationAllowed": true,
+    "registrationEmailAsUsername": true,
+    "rememberMe": true,
+    "verifyEmail": false,
+    "loginWithEmailAllowed": true,
+    "duplicateEmailsAllowed": false,
+    "resetPasswordAllowed": true,
+    "editUsernameAllowed": false,
+    "bruteForceProtected": true,
+    "permanentLockout": false,
+    "maxFailureWaitSeconds": 900,
+    "minimumQuickLoginWaitSeconds": 60,
+    "waitIncrementSeconds": 60,
+    "quickLoginCheckMilliSeconds": 1000,
+    "maxDeltaTimeSeconds": 43200,
+    "failureFactor": 5,
+    "sslRequired": "external",
+    "defaultSignatureAlgorithm": "RS256",
+    "accessTokenLifespan": 300,
+    "accessTokenLifespanForImplicitFlow": 900,
+    "ssoSessionIdleTimeout": 1800,
+    "ssoSessionMaxLifespan": 36000,
+    "offlineSessionIdleTimeout": 2592000,
+    "accessCodeLifespan": 60,
+    "accessCodeLifespanUserAction": 300,
+    "accessCodeLifespanLogin": 1800,
+    "actionTokenGeneratedByAdminLifespan": 43200,
+    "actionTokenGeneratedByUserLifespan": 300,
+    "oauth2DeviceCodeLifespan": 600,
+    "oauth2DevicePollingInterval": 5,
+
     "roles": {
-        "realm": [{ "name": "admin" }, { "name": "vendor" }, { "name": "customer" }]
+        "realm": [
+            {
+                "name": "admin",
+                "description": "Platform administrator with full access",
+                "composite": false
+            },
+            {
+                "name": "vendor",
+                "description": "Marketplace vendor who can sell products",
+                "composite": false
+            },
+            {
+                "name": "customer",
+                "description": "Customer who can browse and purchase products",
+                "composite": false
+            }
+        ]
     },
-    "clients": [
+
+    "defaultRoles": ["customer"],
+
+    "groups": [
         {
-            "clientId": "laravel-client",
-            "enabled": true,
-            "publicClient": false,
-            "secret": "your-client-secret-here",
-            "redirectUris": ["http://localhost:8000/*"],
-            "webOrigins": ["http://localhost:8000"],
-            "standardFlowEnabled": true,
-            "directAccessGrantsEnabled": true
+            "name": "admins",
+            "path": "/admins",
+            "realmRoles": ["admin"]
+        },
+        {
+            "name": "vendors",
+            "path": "/vendors",
+            "realmRoles": ["vendor", "customer"]
+        },
+        {
+            "name": "customers",
+            "path": "/customers",
+            "realmRoles": ["customer"]
         }
     ],
+
+    "clientScopes": [
+        {
+            "name": "tenant",
+            "description": "Tenant context scope",
+            "protocol": "openid-connect",
+            "attributes": {
+                "include.in.token.scope": "true",
+                "display.on.consent.screen": "false"
+            },
+            "protocolMappers": [
+                {
+                    "name": "tenant_id",
+                    "protocol": "openid-connect",
+                    "protocolMapper": "oidc-usermodel-attribute-mapper",
+                    "consentRequired": false,
+                    "config": {
+                        "userinfo.token.claim": "true",
+                        "user.attribute": "tenant_id",
+                        "id.token.claim": "true",
+                        "access.token.claim": "true",
+                        "claim.name": "tenant_id",
+                        "jsonType.label": "String"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "roles",
+            "description": "OpenID Connect scope for add user roles to the access token",
+            "protocol": "openid-connect",
+            "attributes": {
+                "include.in.token.scope": "true",
+                "display.on.consent.screen": "true",
+                "consent.screen.text": "${rolesScopeConsentText}"
+            },
+            "protocolMappers": [
+                {
+                    "name": "realm roles",
+                    "protocol": "openid-connect",
+                    "protocolMapper": "oidc-usermodel-realm-role-mapper",
+                    "consentRequired": false,
+                    "config": {
+                        "multivalued": "true",
+                        "userinfo.token.claim": "true",
+                        "id.token.claim": "true",
+                        "access.token.claim": "true",
+                        "claim.name": "realm_access.roles",
+                        "jsonType.label": "String"
+                    }
+                },
+                {
+                    "name": "client roles",
+                    "protocol": "openid-connect",
+                    "protocolMapper": "oidc-usermodel-client-role-mapper",
+                    "consentRequired": false,
+                    "config": {
+                        "multivalued": "true",
+                        "userinfo.token.claim": "true",
+                        "id.token.claim": "true",
+                        "access.token.claim": "true",
+                        "claim.name": "resource_access.${client_id}.roles",
+                        "jsonType.label": "String"
+                    }
+                }
+            ]
+        }
+    ],
+
+    "clients": [
+        {
+            "clientId": "pcommerce-app",
+            "name": "P-Commerce Application",
+            "description": "Main Laravel application client",
+            "enabled": true,
+            "publicClient": false,
+            "secret": "${KEYCLOAK_CLIENT_SECRET}",
+            "clientAuthenticatorType": "client-secret",
+            "protocol": "openid-connect",
+            "rootUrl": "${APP_URL}",
+            "baseUrl": "/",
+            "adminUrl": "${APP_URL}",
+            "redirectUris": [
+                "${APP_URL}/auth/callback",
+                "${APP_URL}/auth/callback/*",
+                "http://localhost:8000/auth/callback",
+                "http://localhost/auth/callback",
+                "https://localhost/auth/callback"
+            ],
+            "webOrigins": [
+                "${APP_URL}",
+                "http://localhost:8000",
+                "http://localhost",
+                "https://localhost"
+            ],
+            "standardFlowEnabled": true,
+            "implicitFlowEnabled": false,
+            "directAccessGrantsEnabled": true,
+            "serviceAccountsEnabled": false,
+            "authorizationServicesEnabled": false,
+            "frontchannelLogout": true,
+            "fullScopeAllowed": true,
+            "defaultClientScopes": [
+                "openid",
+                "profile",
+                "email",
+                "roles",
+                "tenant"
+            ],
+            "optionalClientScopes": [
+                "address",
+                "phone",
+                "offline_access"
+            ],
+            "attributes": {
+                "backchannel.logout.session.required": "true",
+                "backchannel.logout.revoke.offline.tokens": "false",
+                "post.logout.redirect.uris": "${APP_URL}/*",
+                "pkce.code.challenge.method": "S256",
+                "access.token.lifespan": "300",
+                "client.session.idle.timeout": "1800",
+                "client.session.max.lifespan": "36000"
+            },
+            "protocolMappers": [
+                {
+                    "name": "tenant_id",
+                    "protocol": "openid-connect",
+                    "protocolMapper": "oidc-usermodel-attribute-mapper",
+                    "consentRequired": false,
+                    "config": {
+                        "userinfo.token.claim": "true",
+                        "user.attribute": "tenant_id",
+                        "id.token.claim": "true",
+                        "access.token.claim": "true",
+                        "claim.name": "tenant_id",
+                        "jsonType.label": "String"
+                    }
+                },
+                {
+                    "name": "groups",
+                    "protocol": "openid-connect",
+                    "protocolMapper": "oidc-group-membership-mapper",
+                    "consentRequired": false,
+                    "config": {
+                        "full.path": "false",
+                        "id.token.claim": "true",
+                        "access.token.claim": "true",
+                        "claim.name": "groups",
+                        "userinfo.token.claim": "true"
+                    }
+                }
+            ]
+        },
+        {
+            "clientId": "pcommerce-admin-cli",
+            "name": "P-Commerce Admin CLI",
+            "description": "Service account for admin operations",
+            "enabled": true,
+            "publicClient": false,
+            "secret": "${KEYCLOAK_ADMIN_CLI_SECRET}",
+            "clientAuthenticatorType": "client-secret",
+            "protocol": "openid-connect",
+            "standardFlowEnabled": false,
+            "implicitFlowEnabled": false,
+            "directAccessGrantsEnabled": false,
+            "serviceAccountsEnabled": true,
+            "authorizationServicesEnabled": false
+        }
+    ],
+
     "identityProviders": [
         {
             "alias": "google",
-            "displayName": "Google",
+            "displayName": "Sign in with Google",
             "providerId": "google",
             "enabled": true,
             "trustEmail": true,
             "storeToken": true,
-            "addReadTokenRoleOnImport": true,
+            "addReadTokenRoleOnCreate": true,
+            "firstBrokerLoginFlowAlias": "first broker login",
             "config": {
-                "clientId": "YOUR_GOOGLE_CLIENT_ID",
-                "clientSecret": "YOUR_GOOGLE_CLIENT_SECRET",
+                "clientId": "${GOOGLE_CLIENT_ID}",
+                "clientSecret": "${GOOGLE_CLIENT_SECRET}",
+                "defaultScope": "openid profile email",
+                "syncMode": "IMPORT",
                 "guiOrder": "1"
             }
         }
-    ]
+    ],
+
+    "identityProviderMappers": [
+        {
+            "name": "google-email-mapper",
+            "identityProviderAlias": "google",
+            "identityProviderMapper": "hardcoded-attribute-idp-mapper",
+            "config": {
+                "syncMode": "INHERIT",
+                "attribute": "tenant_id",
+                "attribute.value": "default"
+            }
+        }
+    ],
+
+    "users": [
+        {
+            "username": "admin@pcommerce.local",
+            "email": "admin@pcommerce.local",
+            "emailVerified": true,
+            "enabled": true,
+            "firstName": "Platform",
+            "lastName": "Admin",
+            "credentials": [
+                {
+                    "type": "password",
+                    "value": "admin123",
+                    "temporary": true
+                }
+            ],
+            "realmRoles": ["admin"],
+            "attributes": {
+                "tenant_id": ["default"]
+            }
+        },
+        {
+            "username": "vendor@pcommerce.local",
+            "email": "vendor@pcommerce.local",
+            "emailVerified": true,
+            "enabled": true,
+            "firstName": "Test",
+            "lastName": "Vendor",
+            "credentials": [
+                {
+                    "type": "password",
+                    "value": "vendor123",
+                    "temporary": true
+                }
+            ],
+            "realmRoles": ["vendor", "customer"],
+            "attributes": {
+                "tenant_id": ["default"]
+            }
+        },
+        {
+            "username": "customer@pcommerce.local",
+            "email": "customer@pcommerce.local",
+            "emailVerified": true,
+            "enabled": true,
+            "firstName": "Test",
+            "lastName": "Customer",
+            "credentials": [
+                {
+                    "type": "password",
+                    "value": "customer123",
+                    "temporary": true
+                }
+            ],
+            "realmRoles": ["customer"],
+            "attributes": {
+                "tenant_id": ["default"]
+            }
+        }
+    ],
+
+    "browserFlow": "browser",
+    "registrationFlow": "registration",
+    "directGrantFlow": "direct grant",
+    "resetCredentialsFlow": "reset credentials",
+    "clientAuthenticationFlow": "clients",
+    "dockerAuthenticationFlow": "docker auth",
+
+    "requiredActions": [
+        {
+            "alias": "CONFIGURE_TOTP",
+            "name": "Configure OTP",
+            "providerId": "CONFIGURE_TOTP",
+            "enabled": true,
+            "defaultAction": false,
+            "priority": 10
+        },
+        {
+            "alias": "UPDATE_PASSWORD",
+            "name": "Update Password",
+            "providerId": "UPDATE_PASSWORD",
+            "enabled": true,
+            "defaultAction": false,
+            "priority": 30
+        },
+        {
+            "alias": "UPDATE_PROFILE",
+            "name": "Update Profile",
+            "providerId": "UPDATE_PROFILE",
+            "enabled": true,
+            "defaultAction": false,
+            "priority": 40
+        },
+        {
+            "alias": "VERIFY_EMAIL",
+            "name": "Verify Email",
+            "providerId": "VERIFY_EMAIL",
+            "enabled": true,
+            "defaultAction": false,
+            "priority": 50
+        },
+        {
+            "alias": "TERMS_AND_CONDITIONS",
+            "name": "Terms and Conditions",
+            "providerId": "TERMS_AND_CONDITIONS",
+            "enabled": false,
+            "defaultAction": false,
+            "priority": 20
+        }
+    ],
+
+    "smtpServer": {
+        "host": "${SMTP_HOST}",
+        "port": "${SMTP_PORT}",
+        "from": "${SMTP_FROM}",
+        "fromDisplayName": "P-Commerce",
+        "auth": true,
+        "user": "${SMTP_USER}",
+        "password": "${SMTP_PASSWORD}",
+        "ssl": false,
+        "starttls": true
+    },
+
+    "eventsConfig": {
+        "eventsEnabled": true,
+        "eventsExpiration": 86400,
+        "eventsListeners": ["jboss-logging"],
+        "enabledEventTypes": [
+            "LOGIN",
+            "LOGIN_ERROR",
+            "LOGOUT",
+            "REGISTER",
+            "REGISTER_ERROR",
+            "CODE_TO_TOKEN",
+            "CODE_TO_TOKEN_ERROR",
+            "REFRESH_TOKEN",
+            "REFRESH_TOKEN_ERROR"
+        ],
+        "adminEventsEnabled": true,
+        "adminEventsDetailsEnabled": true
+    }
 }

@@ -15,11 +15,7 @@ return [
     */
 
     'postmark' => [
-        'key' => env('POSTMARK_API_KEY'),
-    ],
-
-    'resend' => [
-        'key' => env('RESEND_API_KEY'),
+        'token' => env('POSTMARK_TOKEN'),
     ],
 
     'ses' => [
@@ -28,11 +24,35 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'resend' => [
+        'key' => env('RESEND_KEY'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Keycloak Configuration (Stateless JWT Auth)
+    |--------------------------------------------------------------------------
+    |
+    | Configure your Keycloak instance for stateless authentication.
+    | The realm file is at: realms/pcommerce.json
+    |
+    */
+    'keycloak' => [
+        'base_url' => env('KEYCLOAK_BASE_URL', 'http://localhost:8080'),
+        'realm' => env('KEYCLOAK_REALM', 'pcommerce'),
+        'client_id' => env('KEYCLOAK_CLIENT_ID', 'pcommerce-app'),
+        'client_secret' => env('KEYCLOAK_CLIENT_SECRET'),
+        
+        // Admin CLI client for service-to-service calls (optional)
+        'admin_client_id' => env('KEYCLOAK_ADMIN_CLIENT_ID', 'pcommerce-admin-cli'),
+        'admin_client_secret' => env('KEYCLOAK_ADMIN_CLIENT_SECRET'),
     ],
 
 ];

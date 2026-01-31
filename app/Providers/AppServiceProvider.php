@@ -2,11 +2,9 @@
 
 namespace App\Providers;
 
-use Carbon\CarbonImmutable;
-use Illuminate\Support\Facades\Date;
-use Illuminate\Support\Facades\DB;
+use App\Services\StatelessAuthService;
+use App\Services\TenantContext;
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -15,7 +13,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Register TenantContext as singleton (request-scoped)
+        $this->app->singleton(TenantContext::class, function () {
+            return new TenantContext();
+        });
+
+        // Register StatelessAuthService as singleton
+        $this->app->singleton(StatelessAuthService::class, function () {
+            return new StatelessAuthService();
+        });
     }
 
     /**
@@ -23,25 +29,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        $this->configureDefaults();
-    }
-
-    protected function configureDefaults(): void
-    {
-        Date::use(CarbonImmutable::class);
-
-        DB::prohibitDestructiveCommands(
-            app()->isProduction(),
-        );
-
-        Password::defaults(fn (): ?Password => app()->isProduction()
-            ? Password::min(12)
-                ->mixedCase()
-                ->letters()
-                ->numbers()
-                ->symbols()
-                ->uncompromised()
-            : null
-        );
+        //
     }
 }
