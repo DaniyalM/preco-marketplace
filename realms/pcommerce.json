@@ -152,22 +152,11 @@
             "secret": "${KEYCLOAK_CLIENT_SECRET}",
             "clientAuthenticatorType": "client-secret",
             "protocol": "openid-connect",
-            "rootUrl": "${APP_URL}",
+            "rootUrl": "http://localhost:8000",
             "baseUrl": "/",
-            "adminUrl": "${APP_URL}",
-            "redirectUris": [
-                "${APP_URL}/auth/callback",
-                "${APP_URL}/auth/callback/*",
-                "http://localhost:8000/auth/callback",
-                "http://localhost/auth/callback",
-                "https://localhost/auth/callback"
-            ],
-            "webOrigins": [
-                "${APP_URL}",
-                "http://localhost:8000",
-                "http://localhost",
-                "https://localhost"
-            ],
+            "adminUrl": "http://localhost:8000",
+            "redirectUris": ["http://localhost:8000/auth/callback", "http://localhost/auth/callback", "https://localhost/auth/callback"],
+            "webOrigins": ["http://localhost:8000", "http://localhost", "https://localhost"],
             "standardFlowEnabled": true,
             "implicitFlowEnabled": false,
             "directAccessGrantsEnabled": true,
@@ -175,22 +164,12 @@
             "authorizationServicesEnabled": false,
             "frontchannelLogout": true,
             "fullScopeAllowed": true,
-            "defaultClientScopes": [
-                "openid",
-                "profile",
-                "email",
-                "roles",
-                "tenant"
-            ],
-            "optionalClientScopes": [
-                "address",
-                "phone",
-                "offline_access"
-            ],
+            "defaultClientScopes": ["openid", "profile", "email", "roles", "tenant"],
+            "optionalClientScopes": ["address", "phone", "offline_access"],
             "attributes": {
                 "backchannel.logout.session.required": "true",
                 "backchannel.logout.revoke.offline.tokens": "false",
-                "post.logout.redirect.uris": "${APP_URL}/*",
+                "post.logout.redirect.uris": "http://localhost:8000/*",
                 "pkce.code.challenge.method": "S256",
                 "access.token.lifespan": "300",
                 "client.session.idle.timeout": "1800",
@@ -396,24 +375,5 @@
         "password": "${SMTP_PASSWORD}",
         "ssl": false,
         "starttls": true
-    },
-
-    "eventsConfig": {
-        "eventsEnabled": true,
-        "eventsExpiration": 86400,
-        "eventsListeners": ["jboss-logging"],
-        "enabledEventTypes": [
-            "LOGIN",
-            "LOGIN_ERROR",
-            "LOGOUT",
-            "REGISTER",
-            "REGISTER_ERROR",
-            "CODE_TO_TOKEN",
-            "CODE_TO_TOKEN_ERROR",
-            "REFRESH_TOKEN",
-            "REFRESH_TOKEN_ERROR"
-        ],
-        "adminEventsEnabled": true,
-        "adminEventsDetailsEnabled": true
     }
 }

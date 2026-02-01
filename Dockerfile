@@ -1,14 +1,12 @@
-# =============================================================================
-# P-Commerce Dockerfile
-# Multi-stage build for Laravel Octane with Swoole
-# Optimized for stateless JWT-based authentication
-# =============================================================================
-
 # Stage 1: Builder (PHP + Node.js for building assets)
 FROM php:8.4-cli-alpine AS builder
 
 ENV APP_ENV=production
 ENV NODE_ENV=production
+ENV VITE_APP_URL="${APP_URL}"
+ENV VITE_KEYCLOAK_BASE_URL="${KEYCLOAK_BASE_URL}"
+ENV VITE_KEYCLOAK_REALM="${KEYCLOAK_REALM}"
+ENV VITE_KEYCLOAK_CLIENT_ID="${KEYCLOAK_CLIENT_ID}"
 
 # Install extension installer (compatible with non-BuildKit)
 ADD https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
@@ -21,7 +19,8 @@ RUN apk add --no-cache \
     git \
     zip \
     unzip \
-    curl
+    curl \
+    bash
 
 # Install PHP extensions
 RUN install-php-extensions \
@@ -52,7 +51,7 @@ RUN composer install \
     --prefer-dist \
     --no-interaction
 
-# Install Node dependencies
+# Install Node dependencies (need dev dependencies for build)
 RUN npm ci --only=production=false
 
 # Copy application code
@@ -62,28 +61,39 @@ COPY . .
 RUN composer dump-autoload --optimize --classmap-authoritative
 
 # Clear caches and prepare Laravel
-RUN rm -rf bootstrap/cache/*.php \
-    && php artisan package:discover --ansi \
+RUN php artisan package:discover --ansi \
     && php artisan config:clear \
     && php artisan route:clear \
-    && php artisan view:clear \
-    && php artisan octane:install --server=swoole --no-interaction
+    && php artisan view:clear
+
+ENV VITE_APP_URL=http://localhost:8000
+ENV VITE_KEYCLOAK_BASE_URL=http://localhost:8080
 
 # Build frontend assets (client + SSR)
-RUN npm run build && npm run build -- --ssr
+RUN npm run build
 
-# Remove dev dependencies but keep production node_modules for SSR
-RUN npm prune --production \
-    && rm -rf .git \
+# Generate Vite manifest if not exists and verify
+RUN if [ ! -f public/build/manifest.json ]; then \
+    echo "Vite manifest not found, running build..." && \
+    npm run build; \
+    fi
+
+# Verify build files exist
+RUN echo "Checking built files:" \
+    && ls -la public/build/ || true
+
+# Keep only production node_modules for SSR
+RUN npm prune --production
+
+# Remove unnecessary files (but keep Vite config for manifest resolution)
+RUN rm -rf .git \
     && rm -rf tests \
     && rm -rf .github \
     && rm -rf docker \
     && rm -f .env* \
     && rm -f phpunit.xml \
-    && rm -f vite.config.ts \
-    && rm -f tailwind.config.js \
-    && rm -f postcss.config.js
-
+    && find . -name "*.stub" -delete \
+    && find . -name "*.example" -delete
 
 # Stage 2: Production Image
 FROM php:8.4-cli-alpine AS production
@@ -94,8 +104,9 @@ LABEL description="P-Commerce Laravel Octane Application"
 ENV APP_ENV=production
 ENV OCTANE_SERVER=swoole
 ENV LOG_CHANNEL=stderr
+ENV VITE_MANIFEST_DIR="/var/www/public/build"
 
-# Install extension installer (compatible with non-BuildKit)
+# Install extension installer
 ADD https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
 RUN chmod +x /usr/local/bin/install-php-extensions
 
@@ -111,20 +122,32 @@ RUN install-php-extensions \
     bcmath \
     opcache
 
-# Install runtime dependencies (including Node.js for SSR)
+# Install runtime dependencies
 RUN apk add --no-cache \
     curl \
     ca-certificates \
     nodejs \
-    npm
+    npm \
+    bash
 
 # Create non-root user
 RUN addgroup -g 1000 www && adduser -u 1000 -G www -s /bin/sh -D www
 
 WORKDIR /var/www
 
-# Copy application from builder
+# Copy application from builder - IMPORTANT: include the public/build directory
 COPY --from=builder --chown=www:www /app /var/www
+
+# Verify Vite manifest exists
+RUN echo "Checking Vite manifest in production image:" \
+    && ls -la /var/www/public/build/ 2>/dev/null || echo "No build directory found" \
+    && if [ -f /var/www/public/build/manifest.json ]; then \
+    echo "Vite manifest found, checking contents:" && \
+    head -20 /var/www/public/build/manifest.json; \
+    else \
+    echo "ERROR: Vite manifest not found in production image!"; \
+    exit 1; \
+    fi
 
 # Create required directories with proper permissions
 RUN mkdir -p storage/framework/cache/data \
@@ -135,11 +158,21 @@ RUN mkdir -p storage/framework/cache/data \
     && chown -R www:www storage bootstrap/cache \
     && chmod -R 775 storage bootstrap/cache
 
-# NOTE: We do NOT switch to www user here - entrypoint handles that after fixing permissions
-
-# Create startup script that ensures permissions and runs as www user
-RUN echo '#!/bin/sh' > /entrypoint.sh && \
+# Create startup script
+RUN echo '#!/bin/bash' > /entrypoint.sh && \
     echo 'set -e' >> /entrypoint.sh && \
+    echo '' >> /entrypoint.sh && \
+    echo '# Generate APP_KEY if not provided' >> /entrypoint.sh && \
+    echo 'if [ -z "$APP_KEY" ]; then' >> /entrypoint.sh && \
+    echo '  echo "No APP_KEY found, generating one..."' >> /entrypoint.sh && \
+    echo '  php /var/www/artisan key:generate --show' >> /entrypoint.sh && \
+    echo 'fi' >> /entrypoint.sh && \
+    echo '' >> /entrypoint.sh && \
+    echo '# Verify Vite manifest exists' >> /entrypoint.sh && \
+    echo 'if [ ! -f /var/www/public/build/manifest.json ]; then' >> /entrypoint.sh && \
+    echo '  echo "ERROR: Vite manifest not found! Build process failed."' >> /entrypoint.sh && \
+    echo '  exit 1' >> /entrypoint.sh && \
+    echo 'fi' >> /entrypoint.sh && \
     echo '' >> /entrypoint.sh && \
     echo '# Ensure storage directories exist and are writable' >> /entrypoint.sh && \
     echo 'mkdir -p /var/www/storage/framework/cache/data' >> /entrypoint.sh && \
@@ -161,7 +194,6 @@ RUN apk add --no-cache su-exec
 
 EXPOSE 8000
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=5 \
     CMD curl -f http://localhost:8000/up || exit 1
 

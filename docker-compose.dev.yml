@@ -14,7 +14,7 @@ services:
       APP_URL: http://localhost:8000
       LOG_CHANNEL: stack
       SESSION_DRIVER: array
-      KEYCLOAK_BASE_URL: http://keycloak:8080
+      KEYCLOAK_BASE_URL: http://localhost:8080
     volumes:
       # Mount source code for hot reload
       - .:/var/www
@@ -22,7 +22,7 @@ services:
       - /var/www/node_modules
     ports:
       - '8000:8000'
-      - '5173:5173'  # Vite HMR
+      - '5173:5173' # Vite HMR
     command: >
       sh -c "composer install &&
              npm install &&
@@ -70,7 +70,7 @@ services:
 
   # Enable mailpit for email testing
   mailpit:
-    profiles: []  # Enable in dev
+    profiles: [] # Enable in dev
 
   # phpMyAdmin for database management
   phpmyadmin:

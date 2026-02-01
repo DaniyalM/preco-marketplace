@@ -13,9 +13,10 @@ services:
     environment:
       APP_NAME: P-Commerce
       APP_ENV: production
+      APP_KEY: ${APP_KEY}
       APP_DEBUG: 'false'
       APP_URL: http://localhost:8000
-      
+
       # Database
       DB_CONNECTION: pgsql
       DB_HOST: postgres
@@ -23,35 +24,39 @@ services:
       DB_DATABASE: ${DB_DATABASE:-pcommerce}
       DB_USERNAME: ${DB_USERNAME:-pcommerce}
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
-      
+
       # Cache & Queue
       CACHE_STORE: redis
       QUEUE_CONNECTION: redis
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      
+
       # Session: Stateless (no server-side sessions)
       SESSION_DRIVER: array
-      
+
       # Octane
       OCTANE_SERVER: swoole
-      
+
       # Keycloak (Stateless JWT Auth)
-      KEYCLOAK_BASE_URL: http://keycloak:8080
+      # Public URL for browser redirects
+      KEYCLOAK_BASE_URL: http://localhost:8080
+      # Internal URL for server-to-server token exchange
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080
       KEYCLOAK_REALM: pcommerce
       KEYCLOAK_CLIENT_ID: pcommerce-app
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-change-me-in-production}
-      
+
       # Default tenant for multi-tenancy
       DEFAULT_TENANT_ID: ${DEFAULT_TENANT_ID:-default}
-      
+
       # SSR Server (for SEO pages) - enable with: docker-compose --profile ssr up
       INERTIA_SSR_ENABLED: ${INERTIA_SSR_ENABLED:-false}
       INERTIA_SSR_URL: ${INERTIA_SSR_URL:-http://ssr:13714}
-      
+
     volumes:
       - ./php.ini:/usr/local/etc/php/conf.d/99-custom.ini:ro
       - app_storage:/var/www/storage
+      # NOTE: Don't mount ./public/build - use Docker-built assets instead
     depends_on:
       postgres:
         condition: service_healthy
@@ -106,6 +111,7 @@ services:
       --max-time=3600
     environment:
       APP_ENV: production
+      APP_KEY: ${APP_KEY}
       DB_CONNECTION: pgsql
       DB_HOST: postgres
       DB_PORT: 5432
@@ -117,7 +123,8 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       SESSION_DRIVER: array
-      KEYCLOAK_BASE_URL: http://keycloak:8080
+      KEYCLOAK_BASE_URL: http://localhost:8080
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080
       KEYCLOAK_REALM: pcommerce
       KEYCLOAK_CLIENT_ID: pcommerce-app
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-change-me-in-production}
@@ -150,6 +157,7 @@ services:
       --max-time=3600
     environment:
       APP_ENV: production
+      APP_KEY: ${APP_KEY}
       DB_CONNECTION: pgsql
       DB_HOST: postgres
       DB_PORT: 5432
@@ -161,7 +169,8 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       SESSION_DRIVER: array
-      KEYCLOAK_BASE_URL: http://keycloak:8080
+      KEYCLOAK_BASE_URL: http://localhost:8080
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080
       KEYCLOAK_REALM: pcommerce
       KEYCLOAK_CLIENT_ID: pcommerce-app
       KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-change-me-in-production}
@@ -189,6 +198,7 @@ services:
     entrypoint: ['/bin/sh', '-c', 'while true; do php /var/www/artisan schedule:run --verbose --no-interaction; sleep 60; done']
     environment:
       APP_ENV: production
+      APP_KEY: ${APP_KEY}
       DB_CONNECTION: pgsql
       DB_HOST: postgres
       DB_PORT: 5432
@@ -265,20 +275,22 @@ services:
       # Admin credentials
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:-admin}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
-      
+
       # Database (PostgreSQL)
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
       KC_DB_USERNAME: ${DB_USERNAME:-pcommerce}
       KC_DB_PASSWORD: ${DB_PASSWORD:-postgres}
-      
+
       # HTTP/Proxy settings
       KC_HTTP_ENABLED: 'true'
+      KC_HOSTNAME: localhost
+      KC_HOSTNAME_PORT: '8080'
       KC_HOSTNAME_STRICT: 'false'
-      KC_PROXY_HEADERS: xforwarded
+      KC_HOSTNAME_STRICT_HTTPS: 'false'
       KC_HEALTH_ENABLED: 'true'
       KC_METRICS_ENABLED: 'true'
-      
+
       # Logging
       KC_LOG_LEVEL: INFO
     ports:
@@ -322,8 +334,8 @@ services:
     container_name: pcommerce_mailpit
     restart: unless-stopped
     ports:
-      - '1025:1025'  # SMTP
-      - '8025:8025'  # Web UI
+      - '1025:1025' # SMTP
+      - '8025:8025' # Web UI
     networks:
       - pcommerce_network
     profiles:

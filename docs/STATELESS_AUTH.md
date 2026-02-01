@@ -94,7 +94,7 @@ Ensure your Keycloak client has:
 ### Environment Variables
 
 ```env
-KEYCLOAK_BASE_URL=http://keycloak:8080
+KEYCLOAK_BASE_URL=http://localhost:8080
 KEYCLOAK_REALM=your-realm
 KEYCLOAK_CLIENT_ID=laravel-app
 KEYCLOAK_CLIENT_SECRET=your-secret

@@ -85,3 +85,84 @@
         color: theme('colors.foreground');
     }
 }
+
+/* View Transitions API styles */
+@layer utilities {
+    /* Default page transition */
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+        animation-duration: 200ms;
+        animation-timing-function: ease-out;
+    }
+
+    ::view-transition-old(root) {
+        animation-name: fade-out;
+    }
+
+    ::view-transition-new(root) {
+        animation-name: fade-in;
+    }
+
+    @keyframes fade-out {
+        from {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        to {
+            opacity: 0;
+            transform: translateY(-8px);
+        }
+    }
+
+    @keyframes fade-in {
+        from {
+            opacity: 0;
+            transform: translateY(8px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Page content transition */
+    .page-content {
+        view-transition-name: page-content;
+    }
+
+    ::view-transition-old(page-content),
+    ::view-transition-new(page-content) {
+        animation-duration: 250ms;
+        animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Sidebar stays static during transitions */
+    .sidebar {
+        view-transition-name: sidebar;
+    }
+
+    ::view-transition-old(sidebar),
+    ::view-transition-new(sidebar) {
+        animation: none;
+    }
+
+    /* Header stays static during transitions */
+    .header {
+        view-transition-name: header;
+    }
+
+    ::view-transition-old(header),
+    ::view-transition-new(header) {
+        animation: none;
+    }
+}
+
+/* Inertia progress bar customization */
+.nprogress .bar {
+    background: theme('colors.primary') !important;
+}
+
+.nprogress .spinner-icon {
+    border-top-color: theme('colors.primary') !important;
+    border-left-color: theme('colors.primary') !important;
+}

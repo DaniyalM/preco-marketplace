@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\MemoryController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\VendorController;
 use App\Http\Controllers\Api\WishlistController;
@@ -18,6 +19,27 @@ use Illuminate\Support\Facades\Route;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
+
+/*
+|--------------------------------------------------------------------------
+| Memory Debug Routes (Development Only)
+|--------------------------------------------------------------------------
+*/
+if (config('app.debug')) {
+    Route::prefix('memory')->group(function () {
+        Route::get('/', [MemoryController::class, 'index']);           // Full dump
+        Route::get('/stats', [MemoryController::class, 'stats']);      // Stats only
+        Route::get('/keys', [MemoryController::class, 'keys']);        // List keys
+        Route::get('/leaks', [MemoryController::class, 'leaks']);      // Find leaks
+        Route::get('/show/{key}', [MemoryController::class, 'show'])->where('key', '.*');
+        Route::post('/store', [MemoryController::class, 'store']);     // Test store
+        Route::delete('/clear/{key}', [MemoryController::class, 'destroy'])->where('key', '.*');
+        Route::delete('/group/{group}', [MemoryController::class, 'destroyGroup']);
+        Route::delete('/all', [MemoryController::class, 'destroyAll']);
+        Route::post('/cleanup', [MemoryController::class, 'cleanup']); // Cleanup old
+        Route::post('/gc', [MemoryController::class, 'gc']);           // Force GC
+    });
+}
 
 // Public API routes
 Route::prefix('public')->group(function () {

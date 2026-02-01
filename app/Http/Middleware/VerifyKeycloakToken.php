@@ -24,10 +24,11 @@ use Symfony\Component\HttpFoundation\Response;
 class VerifyKeycloakToken
 {
     /**
-     * Cookie name for storing the JWT token
+     * Cookie names for storing JWT tokens
      */
     protected const TOKEN_COOKIE = 'access_token';
     protected const REFRESH_COOKIE = 'refresh_token';
+    protected const ID_TOKEN_COOKIE = 'id_token';
 
     /**
      * Public routes that don't require authentication
@@ -154,6 +155,21 @@ class VerifyKeycloakToken
         $roles = $this->extractRoles($decoded);
         $tenantId = $this->extractTenantId($decoded);
         $userId = $this->extractUserId($decoded);
+        
+        // If no user ID in access token, try to get it from id_token
+        // (Keycloak may not include 'sub' in access tokens depending on config)
+        $idTokenData = null;
+        if (!$userId) {
+            $idTokenData = $this->getIdTokenData($request);
+            if ($idTokenData) {
+                $userId = $idTokenData->sub ?? null;
+            }
+        }
+
+        // Merge data from id_token for user profile info
+        if (!$idTokenData) {
+            $idTokenData = $this->getIdTokenData($request);
+        }
 
         $request->attributes->add([
             // Full decoded token for advanced use cases
@@ -168,15 +184,34 @@ class VerifyKeycloakToken
             'keycloak_user' => (object) [
                 'sub' => $userId,
                 'tenant_id' => $tenantId,
-                'email' => $decoded->email ?? null,
-                'email_verified' => $decoded->email_verified ?? false,
-                'name' => $decoded->name ?? $decoded->preferred_username ?? null,
-                'given_name' => $decoded->given_name ?? null,
-                'family_name' => $decoded->family_name ?? null,
-                'preferred_username' => $decoded->preferred_username ?? null,
+                'email' => $idTokenData->email ?? $decoded->email ?? null,
+                'email_verified' => $idTokenData->email_verified ?? $decoded->email_verified ?? false,
+                'name' => $idTokenData->name ?? $decoded->name ?? $decoded->preferred_username ?? null,
+                'given_name' => $idTokenData->given_name ?? $decoded->given_name ?? null,
+                'family_name' => $idTokenData->family_name ?? $decoded->family_name ?? null,
+                'preferred_username' => $idTokenData->preferred_username ?? $decoded->preferred_username ?? null,
                 'roles' => $roles,
             ],
         ]);
+    }
+
+    /**
+     * Get decoded id_token data for user profile information
+     */
+    protected function getIdTokenData(Request $request): ?object
+    {
+        $idToken = $request->cookie(self::ID_TOKEN_COOKIE);
+        
+        if (!$idToken) {
+            return null;
+        }
+
+        try {
+            return $this->validateToken($idToken);
+        } catch (Exception $e) {
+            // If id_token validation fails, return null
+            return null;
+        }
     }
 
     /**

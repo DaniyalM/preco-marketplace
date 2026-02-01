@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\CleanupMemory;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\HandleWhiteLabeling;
 use App\Http\Middleware\RequireRole;
@@ -25,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'refresh_token',
             'id_token',
             'oauth_state',
+            'oauth_code_verifier',
         ]);
 
         // Web routes - stateless with cookies for auth
@@ -34,11 +36,17 @@ return Application::configure(basePath: dirname(__DIR__))
             AddLinkHeadersForPreloadedAssets::class,
             HandleWhiteLabeling::class,
             VerifyKeycloakToken::class,
+            CleanupMemory::class, // Swoole memory cleanup
         ]);
 
         // API routes - fully stateless, no session
         $middleware->api(prepend: [
             VerifyKeycloakToken::class,
+        ]);
+
+        // API routes - append cleanup
+        $middleware->api(append: [
+            CleanupMemory::class, // Swoole memory cleanup
         ]);
 
         // Register middleware aliases for route protection

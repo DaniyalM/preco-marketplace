@@ -1,11 +1,16 @@
 <?php
 
+use App\Http\Controllers\Admin\CategoryController as AdminCategoryController;
 use App\Http\Controllers\Admin\KycController as AdminKycController;
+use App\Http\Controllers\Admin\OrderController as AdminOrderController;
+use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\VendorController as AdminVendorController;
 use App\Http\Controllers\Auth\StatelessAuthController;
 use App\Http\Controllers\Vendor\DashboardController as VendorDashboardController;
 use App\Http\Controllers\Vendor\OnboardingController;
+use App\Http\Controllers\Vendor\OrderController as VendorOrderController;
 use App\Http\Controllers\Vendor\ProductController as VendorProductController;
+use App\Http\Controllers\Vendor\SettingsController as VendorSettingsController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -21,6 +26,27 @@ Route::post('/auth/refresh', [StatelessAuthController::class, 'refresh'])->name(
 Route::post('/auth/logout', [StatelessAuthController::class, 'logout'])->name('auth.logout');
 Route::get('/auth/logout', [StatelessAuthController::class, 'logout'])->name('logout');
 Route::get('/auth/me', [StatelessAuthController::class, 'me'])->name('auth.me');
+
+// Debug route - REMOVE IN PRODUCTION
+Route::get('/auth/debug', function (\Illuminate\Http\Request $request) {
+    $accessToken = $request->cookie('access_token');
+    $refreshToken = $request->cookie('refresh_token');
+    
+    return response()->json([
+        'cookies_present' => [
+            'access_token' => $accessToken ? 'present (' . strlen($accessToken) . ' chars)' : 'missing',
+            'refresh_token' => $refreshToken ? 'present (' . strlen($refreshToken) . ' chars)' : 'missing',
+        ],
+        'request_attributes' => [
+            'user_id' => $request->attributes->get('user_id'),
+            'tenant_id' => $request->attributes->get('tenant_id'),
+            'keycloak_roles' => $request->attributes->get('keycloak_roles'),
+            'keycloak_user' => $request->attributes->get('keycloak_user'),
+        ],
+        'is_authenticated' => app(\App\Services\StatelessAuthService::class)->isAuthenticated($request),
+        'roles' => app(\App\Services\StatelessAuthService::class)->getRoles($request),
+    ]);
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -195,16 +221,16 @@ Route::get('/vendors/{slug}', function ($slug) {
 */
 
 Route::prefix('vendor')->name('vendor.')->group(function () {
-    // Onboarding (requires vendor role, but not approved status)
-    Route::middleware(['role:vendor'])->group(function () {
-        Route::get('/onboarding', [OnboardingController::class, 'index'])->name('onboarding');
-        Route::post('/onboarding/basic-info', [OnboardingController::class, 'storeBasicInfo'])->name('onboarding.store-basic');
-        Route::get('/onboarding/address', [OnboardingController::class, 'showAddressForm'])->name('onboarding.address');
-        Route::post('/onboarding/address', [OnboardingController::class, 'storeAddress'])->name('onboarding.store-address');
-        Route::get('/onboarding/kyc', [OnboardingController::class, 'showKycForm'])->name('onboarding.kyc');
-        Route::post('/onboarding/kyc', [OnboardingController::class, 'storeKyc'])->name('onboarding.store-kyc');
-        Route::get('/status', [OnboardingController::class, 'status'])->name('status');
-    });
+    // Vendor Registration - any authenticated user can start
+    // (no role required - they become vendor through onboarding)
+    Route::get('/register', [OnboardingController::class, 'index'])->name('register');
+    Route::get('/onboarding', [OnboardingController::class, 'index'])->name('onboarding');
+    Route::post('/onboarding/basic-info', [OnboardingController::class, 'storeBasicInfo'])->name('onboarding.store-basic');
+    Route::get('/onboarding/address', [OnboardingController::class, 'showAddressForm'])->name('onboarding.address');
+    Route::post('/onboarding/address', [OnboardingController::class, 'storeAddress'])->name('onboarding.store-address');
+    Route::get('/onboarding/kyc', [OnboardingController::class, 'showKycForm'])->name('onboarding.kyc');
+    Route::post('/onboarding/kyc', [OnboardingController::class, 'storeKyc'])->name('onboarding.store-kyc');
+    Route::get('/status', [OnboardingController::class, 'status'])->name('status');
 
     // Dashboard & Management (requires approved vendor)
     Route::middleware(['role:vendor', 'vendor.approved'])->group(function () {
@@ -214,15 +240,18 @@ Route::prefix('vendor')->name('vendor.')->group(function () {
         Route::resource('products', VendorProductController::class);
         Route::post('/products/{product}/variants', [VendorProductController::class, 'storeVariants'])->name('products.variants.store');
         
-        // Orders (placeholder)
-        Route::get('/orders', function () {
-            return Inertia::render('Vendor/Orders/Index');
-        })->name('orders.index');
+        // Orders
+        Route::get('/orders', [VendorOrderController::class, 'index'])->name('orders.index');
+        Route::get('/orders/{order}', [VendorOrderController::class, 'show'])->name('orders.show');
+        Route::patch('/orders/items/{item}/fulfillment', [VendorOrderController::class, 'updateItemFulfillment'])->name('orders.items.fulfillment');
         
-        // Settings (placeholder)
-        Route::get('/settings', function () {
-            return Inertia::render('Vendor/Settings');
-        })->name('settings');
+        // Settings
+        Route::get('/settings', [VendorSettingsController::class, 'index'])->name('settings');
+        Route::patch('/settings/profile', [VendorSettingsController::class, 'updateProfile'])->name('settings.profile');
+        Route::patch('/settings/address', [VendorSettingsController::class, 'updateAddress'])->name('settings.address');
+        Route::post('/settings/logo', [VendorSettingsController::class, 'updateLogo'])->name('settings.logo');
+        Route::post('/settings/banner', [VendorSettingsController::class, 'updateBanner'])->name('settings.banner');
+        Route::patch('/settings/preferences', [VendorSettingsController::class, 'updateSettings'])->name('settings.preferences');
     });
 });
 
@@ -253,20 +282,30 @@ Route::prefix('admin')->name('admin.')->middleware(['role:admin'])->group(functi
     Route::post('/kyc/{kyc}/approve', [AdminKycController::class, 'approve'])->name('kyc.approve');
     Route::post('/kyc/{kyc}/reject', [AdminKycController::class, 'reject'])->name('kyc.reject');
 
-    // Categories (placeholder)
-    Route::get('/categories', function () {
-        return Inertia::render('Admin/Categories/Index');
-    })->name('categories.index');
+    // Categories
+    Route::get('/categories', [AdminCategoryController::class, 'index'])->name('categories.index');
+    Route::post('/categories', [AdminCategoryController::class, 'store'])->name('categories.store');
+    Route::patch('/categories/{category}', [AdminCategoryController::class, 'update'])->name('categories.update');
+    Route::delete('/categories/{category}', [AdminCategoryController::class, 'destroy'])->name('categories.destroy');
+    Route::post('/categories/{category}/toggle-active', [AdminCategoryController::class, 'toggleActive'])->name('categories.toggle-active');
+    Route::post('/categories/{category}/toggle-featured', [AdminCategoryController::class, 'toggleFeatured'])->name('categories.toggle-featured');
+    Route::post('/categories/reorder', [AdminCategoryController::class, 'reorder'])->name('categories.reorder');
 
-    // Products (placeholder)
-    Route::get('/products', function () {
-        return Inertia::render('Admin/Products/Index');
-    })->name('products.index');
+    // Products
+    Route::get('/products', [AdminProductController::class, 'index'])->name('products.index');
+    Route::get('/products/{product}', [AdminProductController::class, 'show'])->name('products.show');
+    Route::patch('/products/{product}/status', [AdminProductController::class, 'updateStatus'])->name('products.status');
+    Route::post('/products/{product}/toggle-featured', [AdminProductController::class, 'toggleFeatured'])->name('products.toggle-featured');
+    Route::delete('/products/{product}', [AdminProductController::class, 'destroy'])->name('products.destroy');
+    Route::post('/products/bulk-action', [AdminProductController::class, 'bulkAction'])->name('products.bulk-action');
 
-    // Orders (placeholder)
-    Route::get('/orders', function () {
-        return Inertia::render('Admin/Orders/Index');
-    })->name('orders.index');
+    // Orders
+    Route::get('/orders', [AdminOrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{order}', [AdminOrderController::class, 'show'])->name('orders.show');
+    Route::patch('/orders/{order}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.status');
+    Route::patch('/orders/{order}/payment-status', [AdminOrderController::class, 'updatePaymentStatus'])->name('orders.payment-status');
+    Route::patch('/orders/{order}/tracking', [AdminOrderController::class, 'updateTracking'])->name('orders.tracking');
+    Route::post('/orders/{order}/note', [AdminOrderController::class, 'addNote'])->name('orders.note');
 });
 
 /*

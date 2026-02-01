@@ -9,7 +9,7 @@ use Symfony\Component\HttpFoundation\Cookie;
 
 /**
  * Stateless authentication service for Keycloak integration.
- * 
+ *
  * Handles token storage in cookies and provides helper methods
  * for accessing user context from the current request.
  */
@@ -26,10 +26,22 @@ class StatelessAuthService
 
     public function __construct()
     {
+        // Use secure cookies only in production with HTTPS
+        $isSecure = config('app.env') === 'production' && (
+            config('session.secure', false) ||
+            request()->secure()
+        );
+
+        // Handle null domain properly (null means use current domain)
+        $domain = config('session.domain');
+        if ($domain === 'null' || $domain === '') {
+            $domain = null;
+        }
+
         $this->cookieOptions = [
             'path' => '/',
-            'domain' => config('session.domain'),
-            'secure' => config('session.secure', true),
+            'domain' => $domain,
+            'secure' => $isSecure,
             'httpOnly' => true,
             'sameSite' => 'lax',
         ];
@@ -122,10 +134,10 @@ class StatelessAuthService
     /**
      * Exchange authorization code for tokens and create auth cookies
      */
-    public function handleCallback(string $code, string $redirectUri): array
+    public function handleCallback(string $code, string $redirectUri, ?string $codeVerifier = null): array
     {
-        $tokenData = $this->exchangeCodeForTokens($code, $redirectUri);
-        
+        $tokenData = $this->exchangeCodeForTokens($code, $redirectUri, $codeVerifier);
+
         return [
             'tokens' => $tokenData,
             'cookies' => $this->createAuthCookies($tokenData),
@@ -135,15 +147,22 @@ class StatelessAuthService
     /**
      * Exchange authorization code for tokens from Keycloak
      */
-    protected function exchangeCodeForTokens(string $code, string $redirectUri): array
+    protected function exchangeCodeForTokens(string $code, string $redirectUri, ?string $codeVerifier = null): array
     {
-        $response = Http::asForm()->post($this->getTokenEndpoint(), [
+        $params = [
             'grant_type' => 'authorization_code',
             'client_id' => config('services.keycloak.client_id'),
             'client_secret' => config('services.keycloak.client_secret'),
             'code' => $code,
             'redirect_uri' => $redirectUri,
-        ]);
+        ];
+
+        // Add PKCE code verifier if provided
+        if ($codeVerifier) {
+            $params['code_verifier'] = $codeVerifier;
+        }
+
+        $response = Http::asForm()->post($this->getTokenEndpoint(), $params);
 
         if (!$response->successful()) {
             throw new \Exception('Failed to exchange code for tokens: ' . $response->body());
@@ -242,33 +261,56 @@ class StatelessAuthService
     }
 
     /**
-     * Get Keycloak token endpoint
+     * Get Keycloak token endpoint (uses internal URL for server-to-server calls)
      */
     protected function getTokenEndpoint(): string
     {
-        $baseUrl = config('services.keycloak.base_url');
+        // Use internal URL for server-to-server communication (works inside Docker network)
+        $baseUrl = config('services.keycloak.internal_url') ?: config('services.keycloak.base_url');
         $realm = config('services.keycloak.realm');
         return "{$baseUrl}/realms/{$realm}/protocol/openid-connect/token";
     }
 
     /**
-     * Get Keycloak authorization endpoint
+     * Generate PKCE code verifier
      */
-    public function getAuthorizationUrl(string $redirectUri, string $state = null, array $scopes = ['openid', 'profile', 'email']): string
+    public function generateCodeVerifier(): string
+    {
+        return rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
+    }
+
+    /**
+     * Generate PKCE code challenge from verifier
+     */
+    public function generateCodeChallenge(string $codeVerifier): string
+    {
+        return rtrim(strtr(base64_encode(hash('sha256', $codeVerifier, true)), '+/', '-_'), '=');
+    }
+
+    /**
+     * Get Keycloak authorization endpoint with PKCE
+     */
+    public function getAuthorizationUrl(string $redirectUri, ?string $state = null, ?string $codeChallenge = null, array $scopes = ['openid']): string
     {
         $baseUrl = config('services.keycloak.base_url');
         $realm = config('services.keycloak.realm');
         $clientId = config('services.keycloak.client_id');
 
-        $params = http_build_query([
+        $params = [
             'client_id' => $clientId,
             'redirect_uri' => $redirectUri,
             'response_type' => 'code',
             'scope' => implode(' ', $scopes),
             'state' => $state ?? bin2hex(random_bytes(16)),
-        ]);
+        ];
 
-        return "{$baseUrl}/realms/{$realm}/protocol/openid-connect/auth?{$params}";
+        // Add PKCE parameters if code challenge provided
+        if ($codeChallenge) {
+            $params['code_challenge'] = $codeChallenge;
+            $params['code_challenge_method'] = 'S256';
+        }
+
+        return "{$baseUrl}/realms/{$realm}/protocol/openid-connect/auth?" . http_build_query($params);
     }
 
     /**
