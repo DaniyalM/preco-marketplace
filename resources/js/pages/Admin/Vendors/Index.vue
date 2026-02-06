@@ -9,7 +9,7 @@ import {
     CardTitle,
     Button,
     Input,
-    Select,
+    Combobox,
     Badge,
 } from '@/components/ui';
 import { ref, watch } from 'vue';
@@ -55,7 +55,7 @@ const statusOptions = [
     { value: 'approved', label: 'Approved' },
     { value: 'rejected', label: 'Rejected' },
     { value: 'suspended', label: 'Suspended' },
-];
+].map((o) => ({ value: o.value, label: o.label }));
 
 const applyFilters = () => {
     router.get('/admin/vendors', {
@@ -128,11 +128,13 @@ const formatDate = (dateString: string) => {
                                 class="max-w-sm"
                             />
                         </div>
-                        <Select v-model="status" class="w-40">
-                            <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
-                                {{ opt.label }}
-                            </option>
-                        </Select>
+                        <Combobox
+                            v-model="status"
+                            :options="statusOptions"
+                            placeholder="Status"
+                            class="w-40"
+                            :searchable="true"
+                        />
                     </div>
                 </CardContent>
             </Card>

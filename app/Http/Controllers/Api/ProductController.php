@@ -54,6 +54,9 @@ class ProductController extends Controller
             case 'popularity':
                 $query->orderBy('sold_count', $sortOrder);
                 break;
+            case 'trending':
+                $query->orderBy('view_count', $sortOrder);
+                break;
             case 'rating':
                 $query->orderBy('average_rating', $sortOrder);
                 break;

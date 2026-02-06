@@ -127,7 +127,7 @@ services:
       KEYCLOAK_INTERNAL_URL: http://keycloak:8080
       KEYCLOAK_REALM: pcommerce
       KEYCLOAK_CLIENT_ID: pcommerce-app
-      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-change-me-in-production}
+      KEYCLOAK_CLIENT_SECRET: C8U7SnuvZLLAQl7VuGPyAr5ZbwHNKmyy
     volumes:
       - app_storage:/var/www/storage
     depends_on:

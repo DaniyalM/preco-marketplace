@@ -6,14 +6,14 @@ import { EmptyState } from '@/components/common';
 import {
     Card,
     CardContent,
-    Select,
+    Combobox,
     Badge,
     Avatar,
     AvatarImage,
     AvatarFallback,
 } from '@/components/ui';
-import { ref, computed, onMounted, watch } from 'vue';
-import axios from 'axios';
+import { useVendorQuery, useVendorProductsQuery } from '@/composables/useVendorsApi';
+import { ref, computed } from 'vue';
 
 interface Props {
     slug: string;
@@ -46,10 +46,6 @@ interface Product {
     category?: { name: string; slug: string };
 }
 
-const vendor = ref<Vendor | null>(null);
-const products = ref<Product[]>([]);
-const loading = ref(true);
-const productsLoading = ref(true);
 const sort = ref('created_at');
 
 const sortOptions = [
@@ -57,53 +53,29 @@ const sortOptions = [
     { value: 'price', label: 'Price: Low to High' },
     { value: 'price_desc', label: 'Price: High to Low' },
     { value: 'popularity', label: 'Most Popular' },
-];
+].map((o) => ({ value: o.value, label: o.label }));
+
+const productsParams = computed(() => {
+    if (sort.value === 'price_desc') {
+        return { sort: 'price', order: 'desc' };
+    }
+    return { sort: sort.value, order: sort.value === 'price' ? 'asc' : 'desc' };
+});
+
+const { data: vendor, isLoading: loading } = useVendorQuery(() => props.slug);
+const { data: productsData, isLoading: productsLoading } = useVendorProductsQuery(
+    () => props.slug,
+    productsParams
+);
+
+const products = computed(() => (Array.isArray(productsData.value) ? productsData.value : []) as Product[]);
 
 const initials = computed(() => {
-    if (!vendor.value?.business_name) return '?';
-    const words = vendor.value.business_name.split(' ');
+    const v = vendor.value;
+    if (!v?.business_name) return '?';
+    const words = (v as Vendor).business_name.split(' ');
     return words.map(w => w[0]).join('').substring(0, 2).toUpperCase();
 });
-
-const fetchVendor = async () => {
-    loading.value = true;
-    try {
-        const response = await axios.get(`/api/public/vendors/${props.slug}`);
-        vendor.value = response.data.data;
-    } catch (error) {
-        console.error('Failed to fetch vendor', error);
-    } finally {
-        loading.value = false;
-    }
-};
-
-const fetchProducts = async () => {
-    productsLoading.value = true;
-    try {
-        const params: Record<string, string> = {};
-        if (sort.value === 'price_desc') {
-            params.sort = 'price';
-            params.order = 'desc';
-        } else {
-            params.sort = sort.value;
-            params.order = sort.value === 'price' ? 'asc' : 'desc';
-        }
-        
-        const response = await axios.get(`/api/public/vendors/${props.slug}/products`, { params });
-        products.value = response.data.data;
-    } catch (error) {
-        console.error('Failed to fetch products', error);
-    } finally {
-        productsLoading.value = false;
-    }
-};
-
-onMounted(() => {
-    fetchVendor();
-    fetchProducts();
-});
-
-watch(sort, fetchProducts);
 </script>
 
 <template>
@@ -167,11 +139,13 @@ watch(sort, fetchProducts);
                         <span class="text-sm text-muted-foreground">
                             Showing {{ products.length }} products
                         </span>
-                        <Select v-model="sort" class="w-48">
-                            <option v-for="opt in sortOptions" :key="opt.value" :value="opt.value">
-                                {{ opt.label }}
-                            </option>
-                        </Select>
+                        <Combobox
+                            v-model="sort"
+                            :options="sortOptions"
+                            placeholder="Sort by"
+                            class="w-48"
+                            :searchable="true"
+                        />
                     </CardContent>
                 </Card>
 

@@ -1,17 +1,16 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { EmptyState, Price, Rating } from '@/components/common';
 import { AppLayout } from '@/components/layouts';
-import {
-    Card,
-    CardContent,
-    Button,
-    Badge,
-    Separator,
-} from '@/components/ui';
-import { Price, Rating, EmptyState } from '@/components/common';
-import { SeoHead, generateProductJsonLd, generateBreadcrumbJsonLd } from '@/composables/useSeoMeta';
-import { ref, computed, onMounted, watch } from 'vue';
-import axios from 'axios';
+import { Badge, Button, Separator } from '@/components/ui';
+import { SeoHead, generateBreadcrumbJsonLd, generateProductJsonLd } from '@/composables/useSeoMeta';
+import { useToastStore } from '@/stores/toast';
+import { useProductQuery } from '@/composables/useProductsApi';
+import { useAddCartItemMutation } from '@/composables/useCartApi';
+import { useToggleWishlistMutation } from '@/composables/useWishlistApi';
+import { Head, Link } from '@inertiajs/vue3';
+import { computed, ref, watch } from 'vue';
+
+const toast = useToastStore();
 
 interface ProductImage {
     id: number;
@@ -97,10 +96,18 @@ interface Props {
 
 const props = defineProps<Props>();
 
-// Use server-provided product or fetch on client
-const product = ref<Product | null>(props.product || null);
-const loading = ref(!props.product);
-const error = ref<string | null>(null);
+const productQuery = useProductQuery(
+    computed(() => (props.product ? undefined : props.slug)),
+    { enabled: computed(() => !props.product) }
+);
+
+const product = computed(
+    () => (props.product ?? productQuery.data.value ?? null) as Product | null
+);
+const loading = computed(() => !props.product && productQuery.isLoading.value);
+const error = computed(
+    () => (productQuery.error.value ? String(productQuery.error.value) : null)
+);
 
 const selectedOptions = ref<Record<string, string>>({});
 const quantity = ref(1);
@@ -109,7 +116,7 @@ const selectedImageIndex = ref(0);
 // Initialize selected options from product
 const initializeOptions = () => {
     if (product.value?.options) {
-        product.value.options.forEach(option => {
+        product.value.options.forEach((option) => {
             if (option.values.length > 0) {
                 selectedOptions.value[option.name] = option.values[0].value;
             }
@@ -117,17 +124,21 @@ const initializeOptions = () => {
     }
 };
 
-// Initialize if we have SSR data
-if (props.product) {
-    initializeOptions();
-}
+// Initialize options when product is available
+watch(
+    product,
+    (p) => {
+        if (p) initializeOptions();
+    },
+    { immediate: true }
+);
 
 const selectedVariant = computed(() => {
     if (!product.value?.has_variants || !product.value?.variants.length) {
         return null;
     }
-    
-    return product.value.variants.find(variant => {
+
+    return product.value.variants.find((variant) => {
         return Object.entries(selectedOptions.value).every(([key, value]) => {
             return variant.option_values[key] === value;
         });
@@ -165,24 +176,27 @@ const canAddToCart = computed(() => {
 // Get image URL (handle both direct URL and path)
 const getImageUrl = (image: ProductImage): string => {
     if (image.url) return image.url;
-    if (image.path) return `/storage/${image.path}`;
+    if (image.path) {
+        if (image.path.startsWith('http://') || image.path.startsWith('https://')) {
+            return image.path;
+        }
+        return `/storage/${image.path}`;
+    }
     return '';
 };
 
 const primaryImage = computed(() => {
     if (!product.value?.images?.length) return null;
-    const primary = product.value.images.find(i => i.is_primary);
+    const primary = product.value.images.find((i) => i.is_primary);
     return primary || product.value.images[0];
 });
 
 // JSON-LD structured data for SEO
 const productJsonLd = computed(() => {
     if (!product.value) return '';
-    
-    const images = product.value.images
-        .map(img => getImageUrl(img))
-        .filter(Boolean);
-    
+
+    const images = product.value.images.map((img) => getImageUrl(img)).filter(Boolean);
+
     return generateProductJsonLd({
         name: product.value.name,
         description: product.value.short_description || product.value.description || '',
@@ -192,10 +206,13 @@ const productJsonLd = computed(() => {
         availability: isInStock.value ? 'InStock' : 'OutOfStock',
         brand: product.value.vendor?.business_name,
         sku: product.value.sku,
-        rating: product.value.review_count > 0 ? {
-            value: product.value.average_rating,
-            count: product.value.review_count,
-        } : undefined,
+        rating:
+            product.value.review_count > 0
+                ? {
+                      value: product.value.average_rating,
+                      count: product.value.review_count,
+                  }
+                : undefined,
         url: typeof window !== 'undefined' ? window.location.href : undefined,
     });
 });
@@ -205,79 +222,52 @@ const breadcrumbJsonLd = computed(() => {
         { name: 'Home', url: '/' },
         { name: 'Products', url: '/products' },
     ];
-    
+
     if (product.value?.category) {
         items.push({
             name: product.value.category.name,
             url: `/categories/${product.value.category.slug}`,
         });
     }
-    
+
     if (product.value) {
         items.push({
             name: product.value.name,
             url: `/products/${product.value.slug}`,
         });
     }
-    
+
     return generateBreadcrumbJsonLd(items);
-});
-
-// Fetch product on client if not SSR'd
-const fetchProduct = async () => {
-    if (props.product) return; // Already have SSR data
-    
-    loading.value = true;
-    error.value = null;
-    
-    try {
-        const response = await axios.get(`/api/public/products/${props.slug}`);
-        product.value = response.data.data;
-        initializeOptions();
-    } catch (err: any) {
-        error.value = err.response?.status === 404 
-            ? 'Product not found' 
-            : 'Failed to load product';
-    } finally {
-        loading.value = false;
-    }
-};
-
-onMounted(() => {
-    if (!props.product) {
-        fetchProduct();
-    }
 });
 
 const selectOption = (optionName: string, value: string) => {
     selectedOptions.value[optionName] = value;
 };
 
+const addToCartMutation = useAddCartItemMutation();
+const toggleWishlistMutation = useToggleWishlistMutation();
+
 const addToCart = async () => {
-    if (!canAddToCart.value) return;
-    
+    if (!canAddToCart.value || !product.value) return;
     try {
-        await axios.post('/api/cart/items', {
-            product_id: product.value?.id,
+        await addToCartMutation.mutateAsync({
+            product_id: product.value.id,
             variant_id: selectedVariant.value?.id,
             quantity: quantity.value,
         });
-        // TODO: Show success toast
-    } catch (err) {
-        // TODO: Show error toast
+        toast.success('Added to cart');
+    } catch {
+        toast.error('Failed to add to cart');
     }
 };
 
 const addToWishlist = async () => {
     if (!product.value) return;
-    
     try {
-        await axios.post('/api/wishlist', {
-            product_id: product.value.id,
-        });
-        // TODO: Show success toast
-    } catch (err) {
-        // TODO: Show error toast
+        await toggleWishlistMutation.mutateAsync({ productId: product.value.id });
+        toast.success('Added to wishlist');
+    } catch {
+        toast.error('Failed to update wishlist');
     }
 };
 </script>
@@ -309,7 +299,11 @@ const addToWishlist = async () => {
             <div v-if="loading" class="flex items-center justify-center py-12">
                 <svg class="h-8 w-8 animate-spin text-primary" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    <path
+                        class="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
                 </svg>
             </div>
 
@@ -337,7 +331,12 @@ const addToWishlist = async () => {
                         />
                         <div v-else class="flex h-full items-center justify-center">
                             <svg class="h-24 w-24 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1"
+                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                />
                             </svg>
                         </div>
                     </div>
@@ -394,28 +393,16 @@ const addToWishlist = async () => {
                     <!-- Title -->
                     <div>
                         <h1 class="text-3xl font-bold" itemprop="name">{{ product.name }}</h1>
-                        <Link
-                            v-if="product.vendor"
-                            :href="`/vendors/${product.vendor.slug}`"
-                            class="text-muted-foreground hover:text-primary"
-                        >
+                        <Link v-if="product.vendor" :href="`/vendors/${product.vendor.slug}`" class="text-muted-foreground hover:text-primary">
                             by {{ product.vendor.business_name }}
                         </Link>
                     </div>
 
                     <!-- Rating -->
-                    <Rating
-                        :value="product.average_rating"
-                        :review-count="product.review_count"
-                        show-value
-                    />
+                    <Rating :value="product.average_rating" :review-count="product.review_count" show-value />
 
                     <!-- Price -->
-                    <Price
-                        :amount="currentPrice"
-                        :compare-at="compareAtPrice"
-                        size="xl"
-                    />
+                    <Price :amount="currentPrice" :compare-at="compareAtPrice" size="xl" />
 
                     <!-- Short Description -->
                     <p v-if="product.short_description" class="text-muted-foreground" itemprop="description">
@@ -427,18 +414,18 @@ const addToWishlist = async () => {
                     <!-- Options -->
                     <div v-if="product.has_variants && product.options.length > 0" class="space-y-4">
                         <div v-for="option in product.options" :key="option.id">
-                            <label class="mb-2 block text-sm font-medium">
-                                {{ option.name }}: {{ selectedOptions[option.name] }}
-                            </label>
+                            <label class="mb-2 block text-sm font-medium"> {{ option.name }}: {{ selectedOptions[option.name] }} </label>
                             <div class="flex flex-wrap gap-2">
                                 <button
                                     v-for="value in option.values"
                                     :key="value.id"
                                     type="button"
                                     class="rounded-lg border px-4 py-2 text-sm font-medium transition-colors"
-                                    :class="selectedOptions[option.name] === value.value
-                                        ? 'border-primary bg-primary text-primary-foreground'
-                                        : 'border-input hover:border-primary'"
+                                    :class="
+                                        selectedOptions[option.name] === value.value
+                                            ? 'border-primary bg-primary text-primary-foreground'
+                                            : 'border-input hover:border-primary'
+                                    "
                                     :style="value.color_code ? { backgroundColor: value.color_code } : {}"
                                     @click="selectOption(option.name, value.value)"
                                 >
@@ -451,30 +438,12 @@ const addToWishlist = async () => {
                     <!-- Quantity & Add to Cart -->
                     <div class="flex items-center gap-4">
                         <div class="flex items-center rounded-lg border">
-                            <button
-                                type="button"
-                                class="px-4 py-2 hover:bg-muted"
-                                :disabled="quantity <= 1"
-                                @click="quantity--"
-                            >
-                                -
-                            </button>
+                            <button type="button" class="px-4 py-2 hover:bg-muted" :disabled="quantity <= 1" @click="quantity--">-</button>
                             <span class="w-12 text-center">{{ quantity }}</span>
-                            <button
-                                type="button"
-                                class="px-4 py-2 hover:bg-muted"
-                                @click="quantity++"
-                            >
-                                +
-                            </button>
+                            <button type="button" class="px-4 py-2 hover:bg-muted" @click="quantity++">+</button>
                         </div>
 
-                        <Button
-                            size="lg"
-                            class="flex-1"
-                            :disabled="!canAddToCart"
-                            @click="addToCart"
-                        >
+                        <Button size="lg" class="flex-1" :disabled="!canAddToCart" @click="addToCart">
                             <template v-if="!isInStock">Out of Stock</template>
                             <template v-else-if="product.has_variants && !selectedVariant">Select Options</template>
                             <template v-else>Add to Cart</template>
@@ -482,7 +451,12 @@ const addToWishlist = async () => {
 
                         <Button variant="outline" size="lg" @click="addToWishlist">
                             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                                />
                             </svg>
                         </Button>
                     </div>
@@ -501,10 +475,7 @@ const addToWishlist = async () => {
                     <!-- Description -->
                     <div v-if="product.description">
                         <h2 class="mb-4 text-lg font-semibold">Description</h2>
-                        <div 
-                            class="prose prose-sm max-w-none text-muted-foreground" 
-                            v-html="product.description" 
-                        />
+                        <div class="prose prose-sm max-w-none text-muted-foreground" v-html="product.description" />
                     </div>
                 </div>
             </div>

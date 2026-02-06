@@ -1,21 +1,23 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import { AppLayout } from '@/components/layouts';
 import { ProductGrid } from '@/components/marketplace';
 import { EmptyState } from '@/components/common';
-import { Button } from '@/components/ui';
-import { useWishlistStore } from '@/stores/wishlist';
-import { onMounted, computed } from 'vue';
+import { useWishlistQuery, useRemoveFromWishlistMutation } from '@/composables/useWishlistApi';
+import { useAuthStore } from '@/stores/auth';
+import { computed } from 'vue';
 
-const wishlistStore = useWishlistStore();
-
-onMounted(() => {
-    wishlistStore.fetchWishlist();
+const authStore = useAuthStore();
+const { data: wishlistItems, isLoading: wishlistLoading } = useWishlistQuery({
+    enabled: computed(() => authStore.isAuthenticated),
 });
+const removeMutation = useRemoveFromWishlistMutation();
 
-// Convert wishlist items to product format for ProductGrid
+const wishlistCount = computed(() => wishlistItems.value?.length ?? 0);
+
 const products = computed(() => {
-    return wishlistStore.items.map(item => ({
+    const items = wishlistItems.value ?? [];
+    return items.map((item) => ({
         id: item.product.id,
         name: item.product.name,
         slug: item.product.slug,
@@ -29,7 +31,7 @@ const products = computed(() => {
 });
 
 const handleRemove = async (product: { id: number }) => {
-    await wishlistStore.remove(product.id);
+    await removeMutation.mutateAsync(product.id);
 };
 </script>
 
@@ -42,14 +44,14 @@ const handleRemove = async (product: { id: number }) => {
                 <div>
                     <h1 class="text-3xl font-bold">My Wishlist</h1>
                     <p class="mt-1 text-muted-foreground">
-                        {{ wishlistStore.count }} items saved
+                        {{ wishlistCount }} items saved
                     </p>
                 </div>
             </div>
 
             <!-- Empty State -->
             <EmptyState
-                v-if="!wishlistStore.loading && wishlistStore.count === 0"
+                v-if="!wishlistLoading && wishlistCount === 0"
                 icon="heart"
                 title="Your wishlist is empty"
                 description="Save items you love to your wishlist and find them easily later."
@@ -61,7 +63,7 @@ const handleRemove = async (product: { id: number }) => {
             <ProductGrid
                 v-else
                 :products="products"
-                :loading="wishlistStore.loading"
+                :loading="wishlistLoading"
                 :columns="4"
                 :show-quick-add="true"
                 @wishlist="handleRemove"

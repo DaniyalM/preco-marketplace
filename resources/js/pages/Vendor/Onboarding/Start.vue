@@ -1,15 +1,8 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3';
-import { AppLayout } from '@/components/layouts';
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-    Button,
-} from '@/components/ui';
 import { FormField } from '@/components/common';
+import { AppLayout } from '@/components/layouts';
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
+import { Head, useForm } from '@inertiajs/vue3';
 
 interface Props {
     user: {
@@ -47,17 +40,11 @@ const submit = () => {
             <!-- Progress -->
             <div class="mb-8">
                 <div class="flex items-center justify-center gap-2">
-                    <div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground">
-                        1
-                    </div>
+                    <div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-medium text-primary-foreground">1</div>
                     <div class="h-0.5 w-12 bg-muted" />
-                    <div class="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium text-muted-foreground">
-                        2
-                    </div>
+                    <div class="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium text-muted-foreground">2</div>
                     <div class="h-0.5 w-12 bg-muted" />
-                    <div class="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium text-muted-foreground">
-                        3
-                    </div>
+                    <div class="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium text-muted-foreground">3</div>
                 </div>
                 <div class="mt-2 flex justify-center gap-8 text-sm">
                     <span class="font-medium text-primary">Business Info</span>
@@ -69,9 +56,7 @@ const submit = () => {
             <Card>
                 <CardHeader>
                     <CardTitle>Welcome, {{ user.name }}!</CardTitle>
-                    <CardDescription>
-                        Let's set up your vendor account. Start by telling us about your business.
-                    </CardDescription>
+                    <CardDescription> Let's set up your vendor account. Start by telling us about your business. </CardDescription>
                 </CardHeader>
 
                 <CardContent>

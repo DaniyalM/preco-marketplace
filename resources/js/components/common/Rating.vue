@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import { computed, type HTMLAttributes } from 'vue';
 
 interface Props extends /* @vue-ignore */ HTMLAttributes {
-    value: number;
+    value?: number | string | null;
     max?: number;
     showValue?: boolean;
     reviewCount?: number;
@@ -22,12 +22,20 @@ const emit = defineEmits<{
     'update:value': [value: number];
 }>();
 
+const numericValue = computed(() => {
+    const v = props.value;
+    if (v == null || v === '') return 0;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+});
+
 const stars = computed(() => {
+    const value = numericValue.value;
     const result = [];
     for (let i = 1; i <= props.max; i++) {
-        if (i <= Math.floor(props.value)) {
+        if (i <= Math.floor(value)) {
             result.push('full');
-        } else if (i - 0.5 <= props.value) {
+        } else if (i - 0.5 <= value) {
             result.push('half');
         } else {
             result.push('empty');
@@ -120,7 +128,7 @@ const handleClick = (index: number) => {
         </div>
         
         <span v-if="showValue" class="text-sm font-medium">
-            {{ value.toFixed(1) }}
+            {{ numericValue.toFixed(1) }}
         </span>
         
         <span v-if="reviewCount !== undefined" class="text-sm text-muted-foreground">

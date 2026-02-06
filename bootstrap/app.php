@@ -6,6 +6,7 @@ use App\Http\Middleware\HandleWhiteLabeling;
 use App\Http\Middleware\RequireRole;
 use App\Http\Middleware\RequireVendorApproved;
 use App\Http\Middleware\SelectiveSsr;
+use App\Http\Middleware\SetTenantConnection;
 use App\Http\Middleware\VerifyKeycloakToken;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -36,6 +37,7 @@ return Application::configure(basePath: dirname(__DIR__))
             AddLinkHeadersForPreloadedAssets::class,
             HandleWhiteLabeling::class,
             VerifyKeycloakToken::class,
+            SetTenantConnection::class,
             CleanupMemory::class, // Swoole memory cleanup
         ]);
 

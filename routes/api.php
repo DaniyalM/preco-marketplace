@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\MemoryController;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\Vendor\DashboardController as VendorDashboardController;
 use App\Http\Controllers\Api\VendorController;
 use App\Http\Controllers\Api\WishlistController;
 use Illuminate\Http\Request;
@@ -81,4 +82,9 @@ Route::middleware(['role:customer,vendor,admin'])->group(function () {
     Route::get('/wishlist', [WishlistController::class, 'index']);
     Route::post('/wishlist', [WishlistController::class, 'toggle']);
     Route::delete('/wishlist/{product}', [WishlistController::class, 'remove']);
+});
+
+// Vendor-only API (approved vendor required)
+Route::middleware(['role:vendor', 'vendor.approved'])->prefix('vendor')->group(function () {
+    Route::get('/dashboard', [VendorDashboardController::class, 'index']);
 });

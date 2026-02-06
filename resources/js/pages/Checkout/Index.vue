@@ -10,10 +10,16 @@ import {
     Button,
     Separator,
 } from '@/components/ui';
-import { useCartStore } from '@/stores/cart';
-import { ref } from 'vue';
+import { useCartQuery } from '@/composables/useCartApi';
+import { useAuthStore } from '@/stores/auth';
+import { computed, ref } from 'vue';
 
-const cartStore = useCartStore();
+const authStore = useAuthStore();
+const { data: cartData } = useCartQuery({
+    enabled: computed(() => authStore.isAuthenticated),
+});
+const cartItems = computed(() => cartData.value?.items ?? []);
+const cartSubtotal = computed(() => cartData.value?.subtotal ?? 0);
 
 const shippingForm = ref({
     first_name: '',
@@ -142,7 +148,7 @@ const countries = [
                             <!-- Items -->
                             <div class="space-y-3">
                                 <div
-                                    v-for="item in cartStore.items"
+                                    v-for="item in cartItems"
                                     :key="item.id"
                                     class="flex items-center gap-3"
                                 >
@@ -167,7 +173,7 @@ const countries = [
                             <div class="space-y-2">
                                 <div class="flex justify-between text-sm">
                                     <span class="text-muted-foreground">Subtotal</span>
-                                    <Price :amount="cartStore.subtotal" size="sm" />
+                                    <Price :amount="cartSubtotal" size="sm" />
                                 </div>
                                 <div class="flex justify-between text-sm">
                                     <span class="text-muted-foreground">Shipping</span>
@@ -183,7 +189,7 @@ const countries = [
 
                             <div class="flex justify-between">
                                 <span class="font-semibold">Total</span>
-                                <Price :amount="cartStore.subtotal" size="lg" />
+                                <Price :amount="cartSubtotal" size="lg" />
                             </div>
 
                             <Button class="w-full" size="lg" disabled>

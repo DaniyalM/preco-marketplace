@@ -244,7 +244,7 @@ class Product extends Model
     public function getPrimaryImageUrlAttribute(): ?string
     {
         $image = $this->images->firstWhere('is_primary', true) ?? $this->images->first();
-        return $image?->path;
+        return $image?->url ?? $image?->path;
     }
 
     // Status helpers

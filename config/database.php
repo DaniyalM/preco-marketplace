@@ -98,6 +98,26 @@ return [
             'sslmode' => env('DB_SSLMODE', 'prefer'),
         ],
 
+        /*
+         * Platform (central) database for MaaS: marketplaces, marketplace_kyc.
+         * Uses same DB as default unless DB_PLATFORM_* is set for separation.
+         */
+        'platform' => [
+            'driver' => env('DB_PLATFORM_CONNECTION', env('DB_CONNECTION', 'mysql')),
+            'url' => env('DB_PLATFORM_URL'),
+            'host' => env('DB_PLATFORM_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('DB_PLATFORM_PORT', env('DB_PORT', '3306')),
+            'database' => env('DB_PLATFORM_DATABASE', env('DB_DATABASE', 'laravel')),
+            'username' => env('DB_PLATFORM_USERNAME', env('DB_USERNAME', 'root')),
+            'password' => env('DB_PLATFORM_PASSWORD', env('DB_PASSWORD', '')),
+            'charset' => env('DB_CHARSET', 'utf8mb4'),
+            'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+        ],
+
         'sqlsrv' => [
             'driver' => 'sqlsrv',
             'url' => env('DB_URL'),

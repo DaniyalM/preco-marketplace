@@ -6,6 +6,9 @@ use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Admin\VendorController as AdminVendorController;
 use App\Http\Controllers\Auth\StatelessAuthController;
+use App\Http\Controllers\SuperAdmin\MarketplaceController as SuperAdminMarketplaceController;
+use App\Http\Controllers\SuperAdmin\MarketplaceKycController as SuperAdminMarketplaceKycController;
+use App\Models\Marketplace;
 use App\Http\Controllers\Vendor\DashboardController as VendorDashboardController;
 use App\Http\Controllers\Vendor\OnboardingController;
 use App\Http\Controllers\Vendor\OrderController as VendorOrderController;
@@ -306,6 +309,35 @@ Route::prefix('admin')->name('admin.')->middleware(['role:admin'])->group(functi
     Route::patch('/orders/{order}/payment-status', [AdminOrderController::class, 'updatePaymentStatus'])->name('orders.payment-status');
     Route::patch('/orders/{order}/tracking', [AdminOrderController::class, 'updateTracking'])->name('orders.tracking');
     Route::post('/orders/{order}/note', [AdminOrderController::class, 'addNote'])->name('orders.note');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Super Admin Routes (MaaS: onboard marketplaces, KYC, provision tenant DBs)
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('super-admin')->name('super-admin.')->middleware(['role:super_admin'])->group(function () {
+    Route::get('/', function () {
+        return Inertia::render('SuperAdmin/Dashboard');
+    })->name('dashboard');
+
+    Route::get('/marketplaces', [SuperAdminMarketplaceController::class, 'index'])->name('marketplaces.index');
+    Route::get('/marketplaces/create', [SuperAdminMarketplaceController::class, 'create'])->name('marketplaces.create');
+    Route::post('/marketplaces', [SuperAdminMarketplaceController::class, 'store'])->name('marketplaces.store');
+    Route::get('/marketplaces/{marketplace}', [SuperAdminMarketplaceController::class, 'show'])->name('marketplaces.show')
+        ->where('marketplace', '[0-9]+');
+
+    Route::get('/marketplaces/{marketplace}/kyc', [SuperAdminMarketplaceKycController::class, 'show'])->name('marketplaces.kyc.show')
+        ->where('marketplace', '[0-9]+');
+    Route::post('/marketplaces/{marketplace}/kyc/start-review', [SuperAdminMarketplaceKycController::class, 'startReview'])->name('marketplaces.kyc.start-review');
+    Route::post('/marketplaces/{marketplace}/kyc/approve', [SuperAdminMarketplaceKycController::class, 'approve'])->name('marketplaces.kyc.approve');
+    Route::post('/marketplaces/{marketplace}/kyc/reject', [SuperAdminMarketplaceKycController::class, 'reject'])->name('marketplaces.kyc.reject');
+});
+
+// Resolve Super Admin {marketplace} from platform connection
+Route::bind('marketplace', function (string $value) {
+    return Marketplace::on('platform')->findOrFail($value);
 });
 
 /*

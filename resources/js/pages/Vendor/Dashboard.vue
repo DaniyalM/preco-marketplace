@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import { VendorLayout } from '@/components/layouts';
 import {
     Card,
@@ -10,43 +10,61 @@ import {
     Button,
 } from '@/components/ui';
 import { StatusBadge, Price, EmptyState } from '@/components/common';
-import { Link } from '@inertiajs/vue3';
+import { useVendorDashboardQuery } from '@/composables/useVendorDashboardApi';
+import { computed } from 'vue';
 
-interface Props {
-    stats: {
-        total_products: number;
-        active_products: number;
-        pending_orders: number;
-        total_revenue: number;
-    };
-    recentOrders: Array<{
-        id: number;
-        order_number: string;
-        product_name: string;
-        quantity: number;
-        total: number;
-        fulfillment_status: string;
-        created_at: string;
-    }>;
-    lowStockProducts: Array<{
-        id: number;
-        name: string;
-        sku: string;
-        stock_quantity: number;
-        low_stock_threshold: number;
-    }>;
-}
+const { data, isLoading, isError, error } = useVendorDashboardQuery();
 
-defineProps<Props>();
+const stats = computed(() => data.value?.stats ?? {
+    total_products: 0,
+    active_products: 0,
+    pending_orders: 0,
+    total_revenue: 0,
+});
+const recentOrders = computed(() => data.value?.recentOrders ?? []);
+const lowStockProducts = computed(() => data.value?.lowStockProducts ?? []);
+
+const apiError = computed(() => {
+    if (!isError.value || !error.value) return null;
+    const err = error.value as { response?: { status: number; data?: { redirect?: string } } };
+    if (err.response?.status === 403 && err.response?.data?.redirect) {
+        return { redirect: err.response.data.redirect };
+    }
+    return { message: 'Failed to load dashboard' };
+});
 </script>
 
 <template>
     <VendorLayout title="Dashboard">
         <Head title="Vendor Dashboard" />
 
-        <div class="space-y-6">
+        <div v-if="apiError?.redirect" class="flex justify-center py-12">
+            <p class="text-muted-foreground">
+                <Link :href="apiError.redirect" class="text-primary underline">
+                    Complete setup or check your vendor status
+                </Link>
+            </p>
+        </div>
+
+        <div v-else-if="apiError" class="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-destructive">
+            {{ apiError.message }}
+        </div>
+
+        <div v-else class="space-y-6">
+            <!-- Loading skeleton for stats -->
+            <div v-if="isLoading" class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <Card v-for="i in 4" :key="i">
+                    <CardHeader class="pb-2">
+                        <div class="h-4 w-24 animate-pulse rounded bg-muted" />
+                    </CardHeader>
+                    <CardContent>
+                        <div class="h-8 w-16 animate-pulse rounded bg-muted" />
+                    </CardContent>
+                </Card>
+            </div>
+
             <!-- Stats Grid -->
-            <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div v-else class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <Card>
                     <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle class="text-sm font-medium">Total Products</CardTitle>
@@ -123,13 +141,15 @@ defineProps<Props>();
                         </div>
                     </CardHeader>
                     <CardContent>
+                        <div v-if="isLoading" class="space-y-4">
+                            <div v-for="i in 3" :key="i" class="h-16 animate-pulse rounded-lg bg-muted" />
+                        </div>
                         <EmptyState
-                            v-if="recentOrders.length === 0"
+                            v-else-if="recentOrders.length === 0"
                             icon="order"
                             title="No orders yet"
                             description="Orders will appear here once customers start buying."
                         />
-
                         <div v-else class="space-y-4">
                             <div
                                 v-for="order in recentOrders"
@@ -165,13 +185,15 @@ defineProps<Props>();
                         </div>
                     </CardHeader>
                     <CardContent>
+                        <div v-if="isLoading" class="space-y-4">
+                            <div v-for="i in 3" :key="i" class="h-16 animate-pulse rounded-lg bg-muted" />
+                        </div>
                         <EmptyState
-                            v-if="lowStockProducts.length === 0"
+                            v-else-if="lowStockProducts.length === 0"
                             icon="box"
                             title="All stocked up"
                             description="No products are running low on inventory."
                         />
-
                         <div v-else class="space-y-4">
                             <div
                                 v-for="product in lowStockProducts"

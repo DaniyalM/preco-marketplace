@@ -9,7 +9,7 @@ import {
     Button,
     Badge,
     Input,
-    Select,
+    Combobox,
 } from '@/components/ui';
 import { StatusBadge, Price, EmptyState, DataTable } from '@/components/common';
 import { ref, watch } from 'vue';
@@ -53,7 +53,7 @@ const statusOptions = [
     { value: 'draft', label: 'Draft' },
     { value: 'active', label: 'Active' },
     { value: 'inactive', label: 'Inactive' },
-];
+].map((o) => ({ value: o.value, label: o.label }));
 
 const columns = [
     { key: 'name', label: 'Product', sortable: true },
@@ -116,11 +116,13 @@ watch(status, applyFilters);
                                 class="max-w-sm"
                             />
                         </div>
-                        <Select v-model="status" class="w-40">
-                            <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
-                                {{ opt.label }}
-                            </option>
-                        </Select>
+                        <Combobox
+                            v-model="status"
+                            :options="statusOptions"
+                            placeholder="Status"
+                            class="w-40"
+                            :searchable="true"
+                        />
                     </div>
                 </CardContent>
             </Card>

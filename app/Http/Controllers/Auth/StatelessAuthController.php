@@ -188,6 +188,7 @@ class StatelessAuthController extends Controller
             'roles' => $this->authService->getRoles($request),
             'is_admin' => $this->authService->isAdmin($request),
             'is_vendor' => $this->authService->isVendor($request),
+            'is_customer' => $this->authService->isCustomer($request),
         ]);
     }
 }

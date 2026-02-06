@@ -348,6 +348,96 @@ docker-compose exec app npm run build:ssr
 docker-compose restart ssr
 ```
 
+## Testing SSR (Product Page and Other SEO Pages)
+
+SSR is enabled for public pages such as **product detail** (`products.show`), categories, vendors, and home. Use one of the following ways to run and test SSR.
+
+### Option 1: With Docker (already running)
+
+If you use `docker-compose up`, the **ssr** service runs the Node SSR server. Ensure your `.env` has:
+
+```env
+INERTIA_SSR_ENABLED=true
+INERTIA_SSR_URL=http://ssr:13714
+```
+
+Then open a product page (e.g. after seeding):
+
+- http://localhost/products/**&lt;product-slug&gt;**
+
+To confirm the response is server-rendered: **View Page Source** (Ctrl+U / Cmd+U). You should see the product name and description in the HTML instead of an empty `<div id="app">`.
+
+### Option 2: Local development (no Docker)
+
+Run the Laravel app and the Inertia SSR server on your machine.
+
+1. **Environment**
+
+   In `.env`:
+
+   ```env
+   INERTIA_SSR_ENABLED=true
+   INERTIA_SSR_URL=http://127.0.0.1:13714
+   ```
+
+2. **Build the SSR bundle**
+
+   The SSR server runs the built Node bundle (e.g. `bootstrap/ssr/ssr.mjs`), so build once:
+
+   ```bash
+   npm run build:ssr
+   ```
+
+   This runs `vite build` and `vite build --ssr` and writes the SSR bundle (often to `bootstrap/ssr/`).
+
+3. **Start Laravel and the SSR server**
+
+   **Terminal 1 – Laravel:**
+
+   ```bash
+   php artisan serve
+   ```
+
+   **Terminal 2 – Inertia SSR:**
+
+   ```bash
+   php artisan inertia:start-ssr
+   ```
+
+   Or run the Node bundle directly (if your setup puts it in `bootstrap/ssr/`):
+
+   ```bash
+   node bootstrap/ssr/ssr.mjs
+   ```
+
+4. **Test the product page**
+
+   - Ensure you have at least one product (e.g. `php artisan db:seed`).
+   - Get a product slug from the DB or from http://127.0.0.1:8000/products.
+   - Open: **http://127.0.0.1:8000/products/&lt;product-slug&gt;**
+   - View Page Source: the initial HTML should contain the product content (SEO-friendly).
+
+### Option 3: Composer “full stack” with SSR
+
+To run Laravel, queue worker, logs, and the SSR server together (no Vite HMR):
+
+```bash
+composer dev:ssr
+```
+
+This builds the frontend and SSR bundle, then starts `php artisan serve`, queue, pail, and `php artisan inertia:start-ssr`. Use the same product URL as above (with your app URL/port).
+
+### Routes that use SSR
+
+SSR is enabled for these route names (see `SelectiveSsr` middleware):
+
+- `welcome`, `home`
+- `products.index`, `products.show`
+- `categories.index`, `categories.show`
+- `vendors.index`, `vendors.show`
+
+Dashboard, admin, cart, checkout, orders, wishlist, and profile routes have SSR disabled.
+
 ### Clear All and Start Fresh
 
 ```bash

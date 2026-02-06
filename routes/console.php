@@ -5,6 +5,7 @@ use App\Jobs\SendLowStockAlert;
 use App\Models\Product;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schedule;
 
 /*
@@ -16,6 +17,42 @@ use Illuminate\Support\Facades\Schedule;
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
+
+/**
+ * Refresh PostgreSQL sales materialized views.
+ * Run after bulk order/product changes or on a schedule (e.g. every 15 min or hourly).
+ */
+Artisan::command('stats:refresh-views', function () {
+    if (DB::getDriverName() !== 'pgsql') {
+        $this->warn('Materialized views are only available with PostgreSQL. Skipping.');
+
+        return 0;
+    }
+
+    $views = [
+        'mv_sales_daily',
+        'mv_sales_monthly',
+        'mv_vendor_sales_stats',
+        'mv_product_sales_stats',
+        'mv_category_sales_stats',
+        'mv_platform_sales_summary',
+    ];
+
+    foreach ($views as $view) {
+        try {
+            DB::statement("REFRESH MATERIALIZED VIEW CONCURRENTLY {$view}");
+            $this->info("Refreshed {$view}");
+        } catch (\Throwable $e) {
+            $this->error("Failed to refresh {$view}: {$e->getMessage()}");
+
+            return 1;
+        }
+    }
+
+    $this->info('All sales materialized views refreshed.');
+
+    return 0;
+})->purpose('Refresh PostgreSQL materialized views for sales stats and reporting');
 
 /*
 |--------------------------------------------------------------------------
@@ -86,3 +123,10 @@ Schedule::command('queue:restart')
         // Only restart if memory usage is above 80%
         return memory_get_usage(true) / 1024 / 1024 > 400; // 400MB threshold
     });
+
+// Refresh PostgreSQL sales/reporting materialized views (PostgreSQL only)
+Schedule::command('stats:refresh-views')
+    ->hourly()
+    ->name('refresh-sales-stats-views')
+    ->withoutOverlapping(30)
+    ->onOneServer();

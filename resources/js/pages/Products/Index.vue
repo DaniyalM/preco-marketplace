@@ -1,16 +1,13 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
 import { AppLayout } from '@/components/layouts';
 import { ProductGrid } from '@/components/marketplace';
-import {
-    Card,
-    CardContent,
-    Input,
-    Select,
-    Button,
-} from '@/components/ui';
-import { ref, onMounted } from 'vue';
-import axios from 'axios';
+import { Button, Card, CardContent, Combobox, Input } from '@/components/ui';
+import { Head } from '@inertiajs/vue3';
+import { useProductsQuery } from '@/composables/useProductsApi';
+import { useAddCartItemMutation } from '@/composables/useCartApi';
+import { useToggleWishlistMutation } from '@/composables/useWishlistApi';
+import { useToastStore } from '@/stores/toast';
+import { ref, computed } from 'vue';
 
 interface Product {
     id: number;
@@ -29,8 +26,6 @@ interface Product {
     };
 }
 
-const products = ref<Product[]>([]);
-const loading = ref(true);
 const search = ref('');
 const sort = ref('created_at');
 
@@ -40,42 +35,44 @@ const sortOptions = [
     { value: 'price_desc', label: 'Price: High to Low' },
     { value: 'popularity', label: 'Most Popular' },
     { value: 'rating', label: 'Top Rated' },
-];
+].map((o) => ({ value: o.value, label: o.label }));
 
-const fetchProducts = async () => {
-    loading.value = true;
-    try {
-        const params: Record<string, string> = {};
-        if (search.value) params.search = search.value;
-        if (sort.value) {
-            if (sort.value === 'price_desc') {
-                params.sort = 'price';
-                params.order = 'desc';
-            } else {
-                params.sort = sort.value;
-                params.order = sort.value === 'price' ? 'asc' : 'desc';
-            }
+const queryParams = computed(() => {
+    const params: Record<string, string> = {};
+    if (search.value) params.search = search.value;
+    if (sort.value) {
+        if (sort.value === 'price_desc') {
+            params.sort = 'price';
+            params.order = 'desc';
+        } else {
+            params.sort = sort.value;
+            params.order = sort.value === 'price' ? 'asc' : 'desc';
         }
-        
-        const response = await axios.get('/api/public/products', { params });
-        products.value = response.data.data;
-    } catch (error) {
-        console.error('Failed to fetch products', error);
-    } finally {
-        loading.value = false;
+    }
+    return params;
+});
+
+const { data: products, isLoading: loading, refetch } = useProductsQuery(queryParams);
+const addToCartMutation = useAddCartItemMutation();
+const toggleWishlistMutation = useToggleWishlistMutation();
+const toast = useToastStore();
+
+const handleQuickAdd = async (product: Product) => {
+    try {
+        await addToCartMutation.mutateAsync({ product_id: product.id, quantity: 1 });
+        toast.success('Added to cart');
+    } catch {
+        toast.error('Failed to add to cart');
     }
 };
 
-onMounted(fetchProducts);
-
-const handleQuickAdd = (product: Product) => {
-    console.log('Quick add:', product);
-    // TODO: Implement quick add to cart
-};
-
-const handleWishlist = (product: Product) => {
-    console.log('Wishlist toggle:', product);
-    // TODO: Implement wishlist toggle
+const handleWishlist = async (product: Product) => {
+    try {
+        await toggleWishlistMutation.mutateAsync({ productId: product.id });
+        toast.success('Wishlist updated');
+    } catch {
+        toast.error('Failed to update wishlist');
+    }
 };
 </script>
 
@@ -89,30 +86,16 @@ const handleWishlist = (product: Product) => {
                 <CardContent class="p-4">
                     <div class="flex flex-col gap-4 md:flex-row md:items-center">
                         <div class="flex-1">
-                            <Input
-                                v-model="search"
-                                placeholder="Search products..."
-                                @keyup.enter="fetchProducts"
-                            />
+                            <Input v-model="search" placeholder="Search products..." @keyup.enter="refetch()" />
                         </div>
-                        <Select v-model="sort" class="w-48" @change="fetchProducts">
-                            <option v-for="opt in sortOptions" :key="opt.value" :value="opt.value">
-                                {{ opt.label }}
-                            </option>
-                        </Select>
-                        <Button @click="fetchProducts">Search</Button>
+                        <Combobox v-model="sort" :options="sortOptions" placeholder="Sort by" class="w-48" :searchable="true" />
+                        <Button @click="refetch()">Search</Button>
                     </div>
                 </CardContent>
             </Card>
 
             <!-- Products Grid -->
-            <ProductGrid
-                :products="products"
-                :loading="loading"
-                :columns="4"
-                @quick-add="handleQuickAdd"
-                @wishlist="handleWishlist"
-            />
+            <ProductGrid :products="(products ?? []) as Product[]" :loading="loading" :columns="4" @quick-add="handleQuickAdd" @wishlist="handleWishlist" />
         </div>
     </AppLayout>
 </template>

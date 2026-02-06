@@ -4,27 +4,15 @@ import { AppLayout } from '@/components/layouts';
 import { ProductGrid } from '@/components/marketplace';
 import { CategoryCard } from '@/components/marketplace';
 import { EmptyState } from '@/components/common';
-import { Card, CardContent, Select, Button } from '@/components/ui';
-import { ref, onMounted, watch } from 'vue';
-import axios from 'axios';
+import { Card, CardContent, Combobox } from '@/components/ui';
+import { useCategoryQuery, useCategoryProductsQuery } from '@/composables/useCategoriesApi';
+import { ref, computed } from 'vue';
 
 interface Props {
     slug: string;
 }
 
 const props = defineProps<Props>();
-
-interface Category {
-    id: number;
-    name: string;
-    slug: string;
-    description?: string;
-    image?: string | null;
-    products_count?: number;
-    parent?: { name: string; slug: string } | null;
-    children?: Category[];
-    breadcrumb?: Array<{ name: string; slug: string }>;
-}
 
 interface Product {
     id: number;
@@ -39,58 +27,28 @@ interface Product {
     vendor?: { business_name: string; slug: string };
 }
 
-const category = ref<Category | null>(null);
-const products = ref<Product[]>([]);
-const loading = ref(true);
-const productsLoading = ref(true);
 const sort = ref('created_at');
-
 const sortOptions = [
     { value: 'created_at', label: 'Newest' },
     { value: 'price', label: 'Price: Low to High' },
     { value: 'price_desc', label: 'Price: High to Low' },
     { value: 'popularity', label: 'Most Popular' },
-];
+].map((o) => ({ value: o.value, label: o.label }));
 
-const fetchCategory = async () => {
-    loading.value = true;
-    try {
-        const response = await axios.get(`/api/public/categories/${props.slug}`);
-        category.value = response.data.data;
-    } catch (error) {
-        console.error('Failed to fetch category', error);
-    } finally {
-        loading.value = false;
+const productsParams = computed(() => {
+    if (sort.value === 'price_desc') {
+        return { sort: 'price', order: 'desc' };
     }
-};
-
-const fetchProducts = async () => {
-    productsLoading.value = true;
-    try {
-        const params: Record<string, string> = {};
-        if (sort.value === 'price_desc') {
-            params.sort = 'price';
-            params.order = 'desc';
-        } else {
-            params.sort = sort.value;
-            params.order = sort.value === 'price' ? 'asc' : 'desc';
-        }
-        
-        const response = await axios.get(`/api/public/categories/${props.slug}/products`, { params });
-        products.value = response.data.data;
-    } catch (error) {
-        console.error('Failed to fetch products', error);
-    } finally {
-        productsLoading.value = false;
-    }
-};
-
-onMounted(() => {
-    fetchCategory();
-    fetchProducts();
+    return { sort: sort.value, order: sort.value === 'price' ? 'asc' : 'desc' };
 });
 
-watch(sort, fetchProducts);
+const { data: category, isLoading: loading } = useCategoryQuery(() => props.slug);
+const { data: productsData, isLoading: productsLoading } = useCategoryProductsQuery(
+    () => props.slug,
+    productsParams
+);
+
+const products = computed(() => (Array.isArray(productsData.value) ? productsData.value : []) as Product[]);
 </script>
 
 <template>
@@ -106,7 +64,7 @@ watch(sort, fetchProducts);
                 </svg>
             </div>
 
-            <template v-else-if="category">
+            <template v-else-if="category != null">
                 <!-- Breadcrumb -->
                 <nav class="mb-6 flex text-sm text-muted-foreground">
                     <Link href="/categories" class="hover:text-foreground">Categories</Link>
@@ -150,11 +108,13 @@ watch(sort, fetchProducts);
                         <span class="text-sm text-muted-foreground">
                             Showing {{ products.length }} products
                         </span>
-                        <Select v-model="sort" class="w-48">
-                            <option v-for="opt in sortOptions" :key="opt.value" :value="opt.value">
-                                {{ opt.label }}
-                            </option>
-                        </Select>
+                        <Combobox
+                            v-model="sort"
+                            :options="sortOptions"
+                            placeholder="Sort by"
+                            class="w-48"
+                            :searchable="true"
+                        />
                     </CardContent>
                 </Card>
 

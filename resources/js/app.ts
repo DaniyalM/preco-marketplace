@@ -1,9 +1,11 @@
+import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query';
 import { createInertiaApp, router } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createPinia } from 'pinia';
 import type { DefineComponent } from 'vue';
 import { createApp, h } from 'vue';
 import '../css/app.css';
+import i18n from './i18n';
 import { useAuthStore } from './stores/auth';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
@@ -37,12 +39,19 @@ const setupViewTransitions = () => {
 
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
-    resolve: (name) => resolvePageComponent(`./Pages/${name}.vue`, import.meta.glob<DefineComponent>('./Pages/**/*.vue')),
+    resolve: (name) => resolvePageComponent(`./pages/${name}.vue`, import.meta.glob<DefineComponent>('./pages/**/*.vue')),
     setup({ el, App, props, plugin }) {
         const pinia = createPinia();
+        const queryClient = new QueryClient({
+            defaultOptions: {
+                queries: {
+                    staleTime: 1000 * 60, // 1 minute
+                },
+            },
+        });
         const app = createApp({ render: () => h(App, props) });
 
-        app.use(plugin).use(pinia);
+        app.use(plugin).use(pinia).use(i18n).use(VueQueryPlugin, { queryClient });
 
         // Initialize auth store (stateless - reads from Inertia shared props)
         const authStore = useAuthStore();

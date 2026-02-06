@@ -11,21 +11,32 @@ import {
     Button,
     Separator,
 } from '@/components/ui';
-import { useCartStore } from '@/stores/cart';
-import { onMounted } from 'vue';
+import {
+    useCartQuery,
+    useUpdateCartItemMutation,
+    useRemoveCartItemMutation,
+} from '@/composables/useCartApi';
+import { useAuthStore } from '@/stores/auth';
+import { computed } from 'vue';
 
-const cartStore = useCartStore();
-
-onMounted(() => {
-    cartStore.fetchCart();
+const authStore = useAuthStore();
+const { data: cartData, isLoading: cartLoading } = useCartQuery({
+    enabled: computed(() => authStore.isAuthenticated),
 });
+const updateMutation = useUpdateCartItemMutation();
+const removeMutation = useRemoveCartItemMutation();
+
+const cartItems = computed(() => cartData.value?.items ?? []);
+const cartSubtotal = computed(() => cartData.value?.subtotal ?? 0);
+const cartItemCount = computed(() => cartData.value?.item_count ?? 0);
+const cartEmpty = computed(() => cartItems.value.length === 0);
 
 const updateQuantity = async (itemId: number, quantity: number) => {
-    await cartStore.updateItemQuantity(itemId, quantity);
+    await updateMutation.mutateAsync({ itemId, quantity });
 };
 
 const removeItem = async (itemId: number) => {
-    await cartStore.removeItem(itemId);
+    await removeMutation.mutateAsync(itemId);
 };
 </script>
 
@@ -38,7 +49,7 @@ const removeItem = async (itemId: number) => {
 
             <!-- Empty Cart -->
             <EmptyState
-                v-if="!cartStore.loading && cartStore.isEmpty"
+                v-if="!cartLoading && cartEmpty"
                 icon="cart"
                 title="Your cart is empty"
                 description="Looks like you haven't added anything to your cart yet."
@@ -52,11 +63,11 @@ const removeItem = async (itemId: number) => {
                 <div class="lg:col-span-2">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Cart Items ({{ cartStore.itemCount }})</CardTitle>
+                            <CardTitle>Cart Items ({{ cartItemCount }})</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <!-- Loading -->
-                            <div v-if="cartStore.loading" class="space-y-4">
+                            <div v-if="cartLoading" class="space-y-4">
                                 <div v-for="i in 2" :key="i" class="flex gap-4 animate-pulse">
                                     <div class="h-20 w-20 rounded-lg bg-muted" />
                                     <div class="flex-1 space-y-2">
@@ -69,7 +80,7 @@ const removeItem = async (itemId: number) => {
                             <!-- Items -->
                             <div v-else class="divide-y">
                                 <CartItem
-                                    v-for="item in cartStore.items"
+                                    v-for="item in cartItems"
                                     :key="item.id"
                                     :item="item"
                                     @update:quantity="(q) => updateQuantity(item.id, q)"
@@ -89,7 +100,7 @@ const removeItem = async (itemId: number) => {
                         <CardContent class="space-y-4">
                             <div class="flex justify-between">
                                 <span class="text-muted-foreground">Subtotal</span>
-                                <Price :amount="cartStore.subtotal" />
+                                <Price :amount="cartSubtotal" />
                             </div>
                             <div class="flex justify-between">
                                 <span class="text-muted-foreground">Shipping</span>
@@ -100,11 +111,11 @@ const removeItem = async (itemId: number) => {
                             
                             <div class="flex justify-between">
                                 <span class="font-semibold">Total</span>
-                                <Price :amount="cartStore.subtotal" size="lg" />
+                                <Price :amount="cartSubtotal" size="lg" />
                             </div>
 
                             <Link href="/checkout" class="block">
-                                <Button class="w-full" size="lg" :disabled="cartStore.isEmpty">
+                                <Button class="w-full" size="lg" :disabled="cartEmpty">
                                     Proceed to Checkout
                                 </Button>
                             </Link>

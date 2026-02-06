@@ -1,11 +1,15 @@
 import { defineStore } from 'pinia';
-import axios from 'axios';
 import { usePage } from '@inertiajs/vue3';
 import type { User } from '@/types';
+import { http } from '@/api/client';
+import { fetchMe, mapMeToUser, refreshToken as apiRefreshToken } from '@/api/auth';
 
 interface AuthState {
     initialized: boolean;
     refreshTimer: ReturnType<typeof setTimeout> | null;
+    /** User fetched from GET /auth/me when shared props have no user (e.g. first load with cookies) */
+    fetchedUser: User | null;
+    meFetched: boolean;
 }
 
 /**
@@ -19,15 +23,18 @@ export const useAuthStore = defineStore('auth', {
     state: (): AuthState => ({
         initialized: false,
         refreshTimer: null,
+        fetchedUser: null,
+        meFetched: false,
     }),
 
     getters: {
         /**
-         * Get current user from Inertia shared props
+         * Get current user from Inertia shared props or from /auth/me fallback
          */
         user(): User | null {
             const page = usePage();
-            return page.props?.auth?.user as User | null;
+            const fromProps = page.props?.auth?.user as User | null;
+            return fromProps ?? this.fetchedUser;
         },
 
         /**
@@ -88,12 +95,29 @@ export const useAuthStore = defineStore('auth', {
          */
         init(): void {
             if (this.initialized) return;
-            
+
             this.initialized = true;
-            
+
             // Setup periodic token refresh if authenticated
             if (this.isAuthenticated) {
                 this.setupTokenRefresh();
+            }
+        },
+
+        /**
+         * Fetch current user from /auth/me (used when shared props have no user but cookies exist)
+         */
+        async fetchMe(): Promise<void> {
+            if (this.meFetched) return;
+            this.meFetched = true;
+            try {
+                const data = await fetchMe();
+                if (data?.id) {
+                    this.fetchedUser = mapMeToUser(data);
+                    this.setupTokenRefresh();
+                }
+            } catch {
+                // Not authenticated or network error; leave fetchedUser null
             }
         },
 
@@ -202,19 +226,16 @@ export const useAuthStore = defineStore('auth', {
     },
 });
 
-// Configure axios to handle 401 responses globally
-axios.interceptors.response.use(
+// Configure API client to handle 401 and retry after refresh
+http.interceptors.response.use(
     response => response,
     async error => {
         if (error.response?.status === 401) {
             const authStore = useAuthStore();
-            
-            // Try to refresh the token
             if (error.response?.data?.error === 'TokenExpired') {
                 const refreshed = await authStore.refreshToken();
                 if (refreshed) {
-                    // Retry the original request
-                    return axios.request(error.config);
+                    return http.request(error.config);
                 }
             }
         }

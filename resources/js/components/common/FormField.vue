@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { cn } from '@/lib/utils';
-import { Input, Label, Textarea, Select } from '@/components/ui';
+import { Input, Label, Textarea, Combobox } from '@/components/ui';
 import { computed, type HTMLAttributes } from 'vue';
 
 interface Props extends /* @vue-ignore */ HTMLAttributes {
@@ -56,23 +56,16 @@ const inputId = computed(() => `field-${Math.random().toString(36).substr(2, 9)}
             @update:model-value="(v) => emit('update:modelValue', v)"
         />
         
-        <Select
+        <Combobox
             v-else-if="type === 'select'"
-            :id="inputId"
             :model-value="modelValue"
-            :placeholder="placeholder"
+            :options="options ?? []"
+            :placeholder="placeholder || 'Select an option...'"
             :disabled="disabled"
             :error="hasError"
+            :searchable="true"
             @update:model-value="(v) => emit('update:modelValue', v)"
-        >
-            <option
-                v-for="option in options"
-                :key="option.value"
-                :value="option.value"
-            >
-                {{ option.label }}
-            </option>
-        </Select>
+        />
         
         <Input
             v-else

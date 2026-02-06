@@ -166,6 +166,14 @@ class VerifyKeycloakToken
             }
         }
 
+        // Last resort: use sid or preferred_username from access token so header shows logged-in state
+        if (!$userId && isset($decoded->sid)) {
+            $userId = $decoded->sid;
+        }
+        if (!$userId && isset($decoded->preferred_username)) {
+            $userId = (string) $decoded->preferred_username;
+        }
+
         // Merge data from id_token for user profile info
         if (!$idTokenData) {
             $idTokenData = $this->getIdTokenData($request);

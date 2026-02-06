@@ -81,11 +81,19 @@ class HandleInertiaRequests extends Middleware
             return null;
         }
 
+        $userId = $this->authService->getUserId($request);
         $user = $this->authService->getUser($request);
         $roles = $this->authService->getRoles($request);
 
+        // Treat as vendor if they have Keycloak vendor role OR a Vendor record (e.g. completed onboarding)
+        $hasVendorRecord = $userId && Vendor::where('keycloak_user_id', $userId)->exists();
+        $isVendor = in_array('vendor', $roles) || $hasVendorRecord;
+        if ($isVendor && !in_array('vendor', $roles)) {
+            $roles = array_merge($roles, ['vendor']);
+        }
+
         return [
-            'id' => $this->authService->getUserId($request),
+            'id' => $userId,
             'email' => $user->email ?? null,
             'name' => $user->name ?? null,
             'given_name' => $user->given_name ?? null,
@@ -93,7 +101,7 @@ class HandleInertiaRequests extends Middleware
             'email_verified' => $user->email_verified ?? false,
             'roles' => $roles,
             'is_admin' => in_array('admin', $roles),
-            'is_vendor' => in_array('vendor', $roles),
+            'is_vendor' => $isVendor,
             'is_customer' => in_array('customer', $roles),
         ];
     }
@@ -103,7 +111,7 @@ class HandleInertiaRequests extends Middleware
      */
     protected function getVendorData(Request $request, ?array $userData): ?array
     {
-        if (!$userData || !in_array('vendor', $userData['roles'] ?? [])) {
+        if (!$userData) {
             return null;
         }
 

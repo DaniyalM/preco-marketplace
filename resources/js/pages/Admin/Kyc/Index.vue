@@ -7,7 +7,7 @@ import {
     CardContent,
     Button,
     Input,
-    Select,
+    Combobox,
     Badge,
 } from '@/components/ui';
 import { ref, watch } from 'vue';
@@ -55,7 +55,7 @@ const statusOptions = [
     { value: 'approved', label: 'Approved' },
     { value: 'rejected', label: 'Rejected' },
     { value: 'all', label: 'All' },
-];
+].map((o) => ({ value: o.value, label: o.label }));
 
 const applyFilters = () => {
     router.get('/admin/kyc', {
@@ -136,11 +136,13 @@ const idTypeLabels: Record<string, string> = {
                                 class="max-w-sm"
                             />
                         </div>
-                        <Select v-model="status" class="w-48">
-                            <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">
-                                {{ opt.label }}
-                            </option>
-                        </Select>
+                        <Combobox
+                            v-model="status"
+                            :options="statusOptions"
+                            placeholder="Status"
+                            class="w-48"
+                            :searchable="true"
+                        />
                     </div>
                 </CardContent>
             </Card>

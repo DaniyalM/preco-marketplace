@@ -30,6 +30,12 @@ class DemoDataSeeder extends Seeder
         $products = $this->createProducts($vendor, $categories);
         $this->command->info('Created ' . count($products) . ' products');
 
+        // Ensure any product with 0 stock gets stock (e.g. from old seed or default)
+        $updated = Product::where('stock_quantity', 0)->update(['stock_quantity' => 50]);
+        if ($updated > 0) {
+            $this->command->info("Set stock to 50 for {$updated} product(s) that had 0.");
+        }
+
         $this->command->info('Demo data seeding complete!');
     }
 
@@ -347,12 +353,14 @@ class DemoDataSeeder extends Seeder
                 'status' => 'active',
                 'is_featured' => rand(0, 1) === 1,
                 'published_at' => now()->subDays(rand(1, 30)),
+                'stock_quantity' => ($data['stock_quantity'] ?? 0) > 0 ? (int) $data['stock_quantity'] : 50,
             ]);
 
-            // Create a placeholder image
+            // Dummy product image (picsum.photos – deterministic per product for consistent visuals)
+            $imageSeed = 'product-' . $product->id . '-' . $product->slug;
             ProductImage::create([
                 'product_id' => $product->id,
-                'path' => 'https://placehold.co/600x400/e2e8f0/64748b?text=' . urlencode($product->name),
+                'path' => 'https://picsum.photos/seed/' . md5($imageSeed) . '/600/600',
                 'alt_text' => $product->name,
                 'is_primary' => true,
                 'sort_order' => 1,
