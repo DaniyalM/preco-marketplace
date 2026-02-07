@@ -1,15 +1,7 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
 import { AppLayout } from '@/components/layouts';
-import { StatusBadge, Price } from '@/components/common';
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-    Button,
-    Separator,
-} from '@/components/ui';
+import { Card, CardContent } from '@/components/ui';
+import { Link } from '@inertiajs/vue3';
 
 interface Props {
     orderId: string;
@@ -20,7 +12,7 @@ defineProps<Props>();
 
 <template>
     <AppLayout>
-        <Head title="Order Details" />
+        <!-- <Head title="Order Details" /> -->
 
         <div class="container mx-auto max-w-4xl px-4 py-8">
             <Link href="/orders" class="mb-6 inline-flex items-center text-sm text-muted-foreground hover:text-foreground">

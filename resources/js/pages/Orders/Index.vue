@@ -1,16 +1,9 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { EmptyState, Price, StatusBadge } from '@/components/common';
 import { AppLayout } from '@/components/layouts';
-import { StatusBadge, Price, EmptyState } from '@/components/common';
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-    Button,
-} from '@/components/ui';
-import { ref, onMounted } from 'vue';
-import axios from 'axios';
+import { Button, Card, CardContent } from '@/components/ui';
+import { Head, Link } from '@inertiajs/vue3';
+import { onMounted, ref } from 'vue';
 
 interface Order {
     id: number;
@@ -55,7 +48,7 @@ const formatDate = (dateString: string) => {
         <Head title="My Orders" />
 
         <div class="container mx-auto px-4 py-8">
-            <h1 class="mb-8 text-3xl font-bold">My Orders</h1>
+            <!-- <h1 class="mb-8 text-3xl font-bold">My Orders</h1> -->
 
             <!-- Loading -->
             <div v-if="loading" class="space-y-4">
@@ -92,14 +85,10 @@ const formatDate = (dateString: string) => {
                                     <h3 class="font-semibold">{{ order.order_number }}</h3>
                                     <StatusBadge :status="order.status" type="order" />
                                 </div>
-                                <p class="mt-1 text-sm text-muted-foreground">
-                                    Placed on {{ formatDate(order.created_at) }}
-                                </p>
-                                <p class="text-sm text-muted-foreground">
-                                    {{ order.item_count }} items
-                                </p>
+                                <p class="mt-1 text-sm text-muted-foreground">Placed on {{ formatDate(order.created_at) }}</p>
+                                <p class="text-sm text-muted-foreground">{{ order.item_count }} items</p>
                             </div>
-                            
+
                             <div class="flex items-center gap-4">
                                 <Price :amount="order.total" size="lg" />
                                 <Link :href="`/orders/${order.id}`">
