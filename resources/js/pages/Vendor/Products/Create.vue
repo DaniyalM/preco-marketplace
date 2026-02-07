@@ -211,7 +211,7 @@ const submit = () => {
                                     id="track_inventory"
                                     v-model="form.track_inventory"
                                     type="checkbox"
-                                    class="h-4 w-4 rounded border-gray-300"
+                                    class="h-4 w-4 rounded border-input"
                                 />
                                 <label for="track_inventory" class="text-sm font-medium">
                                     Track inventory quantity
@@ -240,7 +240,7 @@ const submit = () => {
                                     id="allow_backorder"
                                     v-model="form.allow_backorder"
                                     type="checkbox"
-                                    class="h-4 w-4 rounded border-gray-300"
+                                    class="h-4 w-4 rounded border-input"
                                 />
                                 <label for="allow_backorder" class="text-sm font-medium">
                                     Allow backorders when out of stock

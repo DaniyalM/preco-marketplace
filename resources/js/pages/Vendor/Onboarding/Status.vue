@@ -77,7 +77,7 @@ const statusInfo = computed(() => {
                 icon: 'info',
                 title: 'Status Unknown',
                 description: 'Please contact support for more information.',
-                color: 'text-gray-600',
+                color: 'text-muted-foreground',
             };
     }
 });

@@ -2,12 +2,14 @@
 import { Avatar, AvatarFallback, Badge, Button, Toaster } from '@/components/ui';
 import { useCartQuery } from '@/composables/useCartApi';
 import { useLocale } from '@/composables/useLocale';
+import { useTheme } from '@/composables/useTheme';
 import { useAuthStore } from '@/stores/auth';
 import { Link } from '@inertiajs/vue3';
 import { computed, onMounted, ref } from 'vue';
 
 const authStore = useAuthStore();
 const { locale, setLocale, t, supportedLocales } = useLocale();
+const { mode: themeMode, store: themeStore, setLight, setDark, setSystem } = useTheme();
 
 interface Props {
     title?: string;
@@ -67,6 +69,7 @@ const userNavigation = computed(() => {
 });
 
 const localeMenuOpen = ref(false);
+const themeMenuOpen = ref(false);
 </script>
 
 <template>
@@ -97,6 +100,40 @@ const localeMenuOpen = ref(false);
 
                     <!-- Right Section -->
                     <div class="flex items-center gap-4">
+                        <!-- Theme: Light / Dark / System -->
+                        <div class="relative">
+                            <button
+                                type="button"
+                                class="flex items-center gap-1 rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                aria-label="Theme"
+                                @click="themeMenuOpen = !themeMenuOpen"
+                            >
+                                <svg v-if="themeMode === 'light'" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                                </svg>
+                                <svg v-else-if="themeMode === 'dark'" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                                </svg>
+                                <svg v-else class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                </svg>
+                            </button>
+                            <div
+                                v-if="themeMenuOpen"
+                                class="absolute end-0 top-full z-50 mt-1 min-w-[8rem] rounded-lg border border-border bg-background py-1 shadow-lg"
+                                @click="themeMenuOpen = false"
+                            >
+                                <button type="button" class="flex w-full items-center gap-2 px-3 py-2 text-start text-sm hover:bg-muted" :class="{ 'bg-muted font-medium': themeStore === 'light' }" @click="setLight">
+                                    <span class="text-lg">☀️</span> Light
+                                </button>
+                                <button type="button" class="flex w-full items-center gap-2 px-3 py-2 text-start text-sm hover:bg-muted" :class="{ 'bg-muted font-medium': themeStore === 'dark' }" @click="setDark">
+                                    <span class="text-lg">🌙</span> Dark
+                                </button>
+                                <button type="button" class="flex w-full items-center gap-2 px-3 py-2 text-start text-sm hover:bg-muted" :class="{ 'bg-muted font-medium': themeStore === 'auto' }" @click="setSystem">
+                                    <span class="text-lg">💻</span> System
+                                </button>
+                            </div>
+                        </div>
                         <!-- Locale switcher -->
                         <div class="relative">
                             <button
@@ -111,7 +148,7 @@ const localeMenuOpen = ref(false);
                             </button>
                             <div
                                 v-if="localeMenuOpen"
-                                class="absolute end-0 top-full z-50 mt-1 min-w-[8rem] rounded-lg border bg-background py-1 shadow-lg"
+                                class="absolute end-0 top-full z-50 mt-1 min-w-[8rem] rounded-lg border border-border bg-background py-1 shadow-lg"
                                 @click="localeMenuOpen = false"
                             >
                                 <button
@@ -166,7 +203,7 @@ const localeMenuOpen = ref(false);
                             <!-- Dropdown -->
                             <div
                                 v-if="userMenuOpen"
-                                class="absolute top-full right-0 mt-2 w-56 rounded-lg border bg-background p-2 shadow-lg"
+                                class="absolute top-full right-0 mt-2 w-56 rounded-lg border border-border bg-background p-2 shadow-lg"
                                 @click="userMenuOpen = false"
                             >
                                 <div class="border-b px-3 py-2">
@@ -176,11 +213,11 @@ const localeMenuOpen = ref(false);
                                 <div class="py-2">
                                     <Link
                                         v-for="item in userNavigation"
-                                        :key="item.name"
+                                        :key="item.key"
                                         :href="item.href"
                                         class="block rounded-md px-3 py-2 text-sm transition-colors hover:bg-muted"
                                     >
-                                        {{ item.name }}
+                                        {{ t(item.key) }}
                                     </Link>
                                 </div>
                                 <div class="border-t pt-2">

@@ -15,6 +15,16 @@ class ProductController extends Controller
             ->with(['vendor:id,business_name,slug', 'category:id,name,slug', 'images' => fn($q) => $q->where('is_primary', true)])
             ->withCount('variants');
 
+        // Search (name, short_description)
+        $search = $request->get('search') ?? $request->get('q');
+        if ($search && strlen((string) $search) >= 2) {
+            $searchStr = (string) $search;
+            $query->where(function ($q) use ($searchStr) {
+                $q->where('name', 'like', '%' . $searchStr . '%')
+                    ->orWhere('short_description', 'like', '%' . $searchStr . '%');
+            });
+        }
+
         // Filters
         if ($request->has('category')) {
             $query->where('category_id', $request->category);

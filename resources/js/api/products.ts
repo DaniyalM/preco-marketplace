@@ -6,6 +6,14 @@ export interface ProductListParams {
     order?: string;
     category?: string;
     per_page?: number;
+    page?: number;
+}
+
+export interface ProductListMeta {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
 }
 
 export async function fetchProducts(params?: ProductListParams) {
@@ -13,6 +21,13 @@ export async function fetchProducts(params?: ProductListParams) {
         params,
     });
     return res.data.data;
+}
+
+export async function fetchProductsPage(params: ProductListParams & { page: number }) {
+    const res = await http.get<{ data: unknown[]; meta: ProductListMeta }>('/api/public/products', {
+        params: { ...params, page: params.page },
+    });
+    return { data: res.data.data, meta: res.data.meta };
 }
 
 export async function fetchFeaturedProducts() {

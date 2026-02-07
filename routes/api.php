@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\CartController;
+use App\Http\Controllers\Api\CheckoutController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\MemoryController;
 use App\Http\Controllers\Api\ProductController;
@@ -77,6 +78,11 @@ Route::middleware(['role:customer,vendor,admin'])->group(function () {
     Route::patch('/cart/items/{item}', [CartController::class, 'updateItem']);
     Route::delete('/cart/items/{item}', [CartController::class, 'removeItem']);
     Route::delete('/cart', [CartController::class, 'clear']);
+
+    // Checkout (place order, confirm crypto payment)
+    Route::get('/checkout/blockchain-networks', [CheckoutController::class, 'blockchainNetworks']);
+    Route::post('/checkout/order', [CheckoutController::class, 'placeOrder']);
+    Route::post('/checkout/orders/{order}/confirm-crypto', [CheckoutController::class, 'confirmCryptoPayment']);
 
     // Wishlist
     Route::get('/wishlist', [WishlistController::class, 'index']);

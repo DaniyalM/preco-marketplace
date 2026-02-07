@@ -50,7 +50,11 @@ const apiError = computed(() => {
             {{ apiError.message }}
         </div>
 
-        <div v-else class="space-y-6">
+        <div v-else class="space-y-8">
+            <div>
+                <h2 class="text-lg font-semibold tracking-tight">Overview</h2>
+                <p class="text-sm text-muted-foreground">Your store performance at a glance.</p>
+            </div>
             <!-- Loading skeleton for stats -->
             <div v-if="isLoading" class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <Card v-for="i in 4" :key="i">

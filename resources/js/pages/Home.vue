@@ -1,7 +1,15 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import { AppLayout } from '@/components/layouts';
-import { ProductGrid } from '@/components/marketplace';
+import {
+    ProductGrid,
+    HeroCarousel,
+    PromoStrip,
+    CategoryStrip,
+    SectionHeader,
+    DealsBanner,
+    TrustBadges,
+} from '@/components/marketplace';
 import { useLocale } from '@/composables/useLocale';
 import { useProductsQuery, useFeaturedProductsQuery } from '@/composables/useProductsApi';
 import { useAddCartItemMutation } from '@/composables/useCartApi';
@@ -52,23 +60,27 @@ const handleWishlist = async (product: Product) => {
 </script>
 
 <template>
-    <AppLayout :title="t('home.title')">
+    <AppLayout>
         <Head :title="t('home.title')" />
 
-        <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <PromoStrip />
+
+        <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
             <h1 class="sr-only">{{ t('home.heroTitle') }}</h1>
+
+            <section class="mb-8 sm:mb-10">
+                <HeroCarousel />
+            </section>
+
+            <CategoryStrip />
 
             <!-- Featured -->
             <section class="mb-12">
-                <div class="mb-4 flex items-center justify-between">
-                    <h2 class="text-xl font-semibold">{{ t('home.featured') }}</h2>
-                    <Link
-                        href="/products"
-                        class="text-sm font-medium text-primary hover:underline"
-                    >
-                        {{ $t('common.viewAll') }}
-                    </Link>
-                </div>
+                <SectionHeader
+                    :title="t('home.featured')"
+                    view-all-href="/products"
+                    :view-all-label="$t('common.viewAll')"
+                />
                 <ProductGrid
                     :products="(featuredQuery.data.value ?? []) as Product[]"
                     :loading="featuredQuery.isLoading.value"
@@ -78,17 +90,17 @@ const handleWishlist = async (product: Product) => {
                 />
             </section>
 
+            <section class="mb-12">
+                <DealsBanner />
+            </section>
+
             <!-- Trending Now -->
             <section class="mb-12">
-                <div class="mb-4 flex items-center justify-between">
-                    <h2 class="text-xl font-semibold">{{ t('home.trending') }}</h2>
-                    <Link
-                        href="/products?sort=trending&order=desc"
-                        class="text-sm font-medium text-primary hover:underline"
-                    >
-                        {{ $t('common.viewAll') }}
-                    </Link>
-                </div>
+                <SectionHeader
+                    :title="t('home.trending')"
+                    view-all-href="/products?sort=trending&order=desc"
+                    :view-all-label="$t('common.viewAll')"
+                />
                 <ProductGrid
                     :products="(trendingQuery.data.value ?? []) as Product[]"
                     :loading="trendingQuery.isLoading.value"
@@ -100,15 +112,11 @@ const handleWishlist = async (product: Product) => {
 
             <!-- Best Selling -->
             <section class="mb-12">
-                <div class="mb-4 flex items-center justify-between">
-                    <h2 class="text-xl font-semibold">{{ t('home.bestSelling') }}</h2>
-                    <Link
-                        href="/products?sort=popularity&order=desc"
-                        class="text-sm font-medium text-primary hover:underline"
-                    >
-                        {{ $t('common.viewAll') }}
-                    </Link>
-                </div>
+                <SectionHeader
+                    :title="t('home.bestSelling')"
+                    view-all-href="/products?sort=popularity&order=desc"
+                    :view-all-label="$t('common.viewAll')"
+                />
                 <ProductGrid
                     :products="(bestSellingQuery.data.value ?? []) as Product[]"
                     :loading="bestSellingQuery.isLoading.value"
@@ -120,15 +128,11 @@ const handleWishlist = async (product: Product) => {
 
             <!-- New Arrivals -->
             <section class="mb-12">
-                <div class="mb-4 flex items-center justify-between">
-                    <h2 class="text-xl font-semibold">{{ t('home.newArrivals') }}</h2>
-                    <Link
-                        href="/products"
-                        class="text-sm font-medium text-primary hover:underline"
-                    >
-                        {{ $t('common.viewAll') }}
-                    </Link>
-                </div>
+                <SectionHeader
+                    :title="t('home.newArrivals')"
+                    view-all-href="/products"
+                    :view-all-label="$t('common.viewAll')"
+                />
                 <ProductGrid
                     :products="(newArrivalsQuery.data.value ?? []) as Product[]"
                     :loading="newArrivalsQuery.isLoading.value"
@@ -137,6 +141,8 @@ const handleWishlist = async (product: Product) => {
                     @wishlist="handleWishlist"
                 />
             </section>
+
+            <TrustBadges />
         </div>
     </AppLayout>
 </template>

@@ -82,14 +82,14 @@ const isActive = (href: string) => {
         <!-- Sidebar -->
         <aside
             :class="cn(
-                'fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r bg-slate-900 text-white transition-transform lg:translate-x-0',
+                'fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-card text-card-foreground transition-transform lg:translate-x-0',
                 mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
             )"
         >
             <!-- Logo -->
-            <div class="flex h-16 items-center gap-2 border-b border-slate-700 px-4">
-                <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-white">
-                    <span class="text-sm font-bold text-slate-900">P</span>
+            <div class="flex h-16 items-center gap-2 border-b border-border px-4">
+                <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+                    <span class="text-sm font-bold text-primary-foreground">P</span>
                 </div>
                 <div>
                     <span class="font-bold">Admin Panel</span>
@@ -105,8 +105,8 @@ const isActive = (href: string) => {
                             :class="cn(
                                 'flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                                 isActive(item.href)
-                                    ? 'bg-white/10 text-white'
-                                    : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                                    ? 'bg-primary/10 text-primary-foreground'
+                                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                             )"
                         >
                             <div class="flex items-center gap-3">
@@ -152,10 +152,10 @@ const isActive = (href: string) => {
             </nav>
             
             <!-- Footer -->
-            <div class="border-t border-slate-700 p-4">
+            <div class="border-t border-border p-4">
                 <Link
                     href="/"
-                    class="flex items-center gap-2 text-sm text-slate-300 hover:text-white"
+                    class="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
                 >
                     <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -198,7 +198,7 @@ const isActive = (href: string) => {
                     
                     <div class="flex items-center gap-2">
                         <Avatar size="sm">
-                            <AvatarFallback class="bg-slate-900 text-white">{{ initials }}</AvatarFallback>
+                            <AvatarFallback class="bg-muted text-foreground">{{ initials }}</AvatarFallback>
                         </Avatar>
                         <div class="hidden md:block">
                             <p class="text-sm font-medium">{{ user?.name }}</p>

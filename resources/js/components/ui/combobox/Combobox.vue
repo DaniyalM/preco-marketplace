@@ -268,8 +268,7 @@ watch(open, (isOpen) => {
             <ComboboxContent
                 :class="
                     cn(
-                        'z-[100] mt-1 min-w-[8rem] overflow-hidden rounded-md border border-gray-200 bg-white p-0 text-gray-900 shadow-lg',
-                        'dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100',
+                        'z-[100] mt-1 min-w-[8rem] overflow-hidden rounded-md border border-border bg-popover p-0 text-popover-foreground shadow-lg',
                         'data-[state=open]:animate-in data-[state=closed]:animate-out',
                         'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
                         'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95'
@@ -292,7 +291,7 @@ watch(open, (isOpen) => {
                         :disabled="option.disabled"
                         :class="
                             cn(
-                                'relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-gray-900 outline-none dark:text-zinc-100',
+                                'relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-foreground outline-none',
                                 'data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
                                 'data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground'
                             )
@@ -337,7 +336,7 @@ watch(open, (isOpen) => {
                         :disabled="option.disabled"
                         :class="
                             cn(
-                                'relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-gray-900 outline-none dark:text-zinc-100',
+                                'relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-foreground outline-none',
                                 'data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
                                 'data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground'
                             )
@@ -381,7 +380,7 @@ watch(open, (isOpen) => {
                             :disabled="option.disabled"
                             :class="
                                 cn(
-                                    'relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-gray-900 outline-none dark:text-zinc-100',
+                                    'relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-foreground outline-none',
                                     'data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
                                     'data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground'
                                 )

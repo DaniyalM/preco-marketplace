@@ -117,7 +117,7 @@ const form = ref({
                                 <p class="font-medium">New Orders</p>
                                 <p class="text-sm text-muted-foreground">Get notified when you receive a new order</p>
                             </div>
-                            <input type="checkbox" class="h-4 w-4 rounded border-gray-300" checked />
+                            <input type="checkbox" class="h-4 w-4 rounded border-input" checked />
                         </div>
                         <Separator />
                         <div class="flex items-center justify-between">
@@ -125,7 +125,7 @@ const form = ref({
                                 <p class="font-medium">Low Stock Alerts</p>
                                 <p class="text-sm text-muted-foreground">Get notified when products are running low</p>
                             </div>
-                            <input type="checkbox" class="h-4 w-4 rounded border-gray-300" checked />
+                            <input type="checkbox" class="h-4 w-4 rounded border-input" checked />
                         </div>
                         <Separator />
                         <div class="flex items-center justify-between">
@@ -133,7 +133,7 @@ const form = ref({
                                 <p class="font-medium">Product Reviews</p>
                                 <p class="text-sm text-muted-foreground">Get notified when customers review your products</p>
                             </div>
-                            <input type="checkbox" class="h-4 w-4 rounded border-gray-300" />
+                            <input type="checkbox" class="h-4 w-4 rounded border-input" />
                         </div>
                     </div>
                 </CardContent>

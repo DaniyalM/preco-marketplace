@@ -116,7 +116,7 @@ const handleClick = (index: number) => {
                     :class="sizeClasses"
                     viewBox="0 0 20 20"
                     fill="currentColor"
-                    class="text-gray-200"
+                    class="text-muted"
                 >
                     <path
                         fill-rule="evenodd"

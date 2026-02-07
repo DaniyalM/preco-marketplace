@@ -9,6 +9,8 @@ export const queryKeys = {
         all: () => [...queryKeys.all, 'products'] as const,
         list: (params?: Record<string, unknown>) =>
             [...queryKeys.products.all(), 'list', params ?? {}] as const,
+        infiniteList: (params?: Record<string, unknown>) =>
+            [...queryKeys.products.all(), 'infinite', params ?? {}] as const,
         detail: (slug: string) =>
             [...queryKeys.products.all(), 'detail', slug] as const,
         featured: () => [...queryKeys.products.all(), 'featured'] as const,

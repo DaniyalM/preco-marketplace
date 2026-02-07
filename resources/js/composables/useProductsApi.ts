@@ -1,12 +1,30 @@
-import { useQuery } from '@tanstack/vue-query';
+import { useQuery, useInfiniteQuery } from '@tanstack/vue-query';
 import { computed, toValue, type MaybeRefOrGetter } from 'vue';
 import {
     fetchProducts,
+    fetchProductsPage,
     fetchProductBySlug,
     fetchFeaturedProducts,
     type ProductListParams,
 } from '@/api/products';
 import { queryKeys } from '@/queries/keys';
+
+export function useProductsInfiniteQuery(
+    params?: MaybeRefOrGetter<ProductListParams | undefined>,
+    options?: { perPage?: number }
+) {
+    const perPage = options?.perPage ?? 24;
+    return useInfiniteQuery({
+        queryKey: computed(() => queryKeys.products.infiniteList(toValue(params) ?? {})),
+        queryFn: ({ pageParam }) =>
+            fetchProductsPage({ ...toValue(params), per_page: perPage, page: pageParam }),
+        initialPageParam: 1,
+        getNextPageParam: (lastPage) => {
+            const { current_page, last_page } = lastPage.meta;
+            return current_page < last_page ? current_page + 1 : undefined;
+        },
+    });
+}
 
 export function useProductsQuery(
     params?: MaybeRefOrGetter<ProductListParams | undefined>

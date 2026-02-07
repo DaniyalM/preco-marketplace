@@ -11,6 +11,8 @@ interface Props extends /* @vue-ignore */ HTMLAttributes {
     showVendor?: boolean;
     showRating?: boolean;
     showQuickAdd?: boolean;
+    /** Use compact ProductCard (smaller image, padding, text) */
+    compact?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -19,6 +21,7 @@ const props = withDefaults(defineProps<Props>(), {
     showVendor: true,
     showRating: true,
     showQuickAdd: true,
+    compact: true,
 });
 
 const emit = defineEmits<{
@@ -39,17 +42,30 @@ const gridClasses = {
         <!-- Loading Skeleton -->
         <div
             v-if="loading"
-            :class="cn('grid gap-6', gridClasses[columns])"
+            :class="cn('grid', compact ? 'gap-3 sm:gap-4' : 'gap-5 sm:gap-6', gridClasses[columns])"
         >
             <div
-                v-for="i in columns * 2"
+                v-for="i in columns * 3"
                 :key="i"
-                class="animate-pulse"
+                :class="compact ? 'rounded-xl' : 'rounded-2xl'"
+                class="overflow-hidden border border-border/50 bg-card"
             >
-                <div class="aspect-square rounded-lg bg-muted" />
-                <div class="mt-4 space-y-2">
-                    <div class="h-4 w-3/4 rounded bg-muted" />
-                    <div class="h-4 w-1/2 rounded bg-muted" />
+                <div
+                    :class="[
+                        'relative w-full overflow-hidden bg-muted/60',
+                        compact ? 'aspect-square' : 'aspect-[3/4]',
+                    ]"
+                >
+                    <div class="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-muted/50 to-transparent" />
+                </div>
+                <div :class="compact ? 'space-y-2 p-2.5' : 'space-y-3 p-4'">
+                    <div class="h-3 w-1/4 rounded-full bg-muted" />
+                    <div :class="compact ? 'h-3 w-full' : 'h-4 w-full'" class="rounded-md bg-muted" />
+                    <div :class="compact ? 'h-3 w-2/3' : 'h-4 w-2/3'" class="rounded-md bg-muted" />
+                    <div class="flex gap-2 pt-2">
+                        <div :class="compact ? 'h-4 w-14' : 'h-5 w-16'" class="rounded-md bg-muted" />
+                        <div :class="compact ? 'h-4 w-10' : 'h-5 w-12'" class="rounded-full bg-muted" />
+                    </div>
                 </div>
             </div>
         </div>
@@ -65,12 +81,13 @@ const gridClasses = {
         <!-- Product Grid -->
         <div
             v-else
-            :class="cn('grid gap-6', gridClasses[columns])"
+            :class="cn('grid', compact ? 'gap-3 sm:gap-4' : 'gap-5 sm:gap-6', gridClasses[columns])"
         >
             <ProductCard
                 v-for="product in products"
                 :key="product.id"
                 :product="product"
+                :compact="compact"
                 :show-vendor="showVendor"
                 :show-rating="showRating"
                 :show-quick-add="showQuickAdd"
